@@ -140,7 +140,7 @@ summary{cursor:pointer;font-weight:700}
 <script type="module">
 "use strict";
 /* ============ CORE ============ */
-const VERSION = "0.9.0-beta.2";
+const VERSION = "0.9.0-beta.3-feedback";
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const pick = a => a[Math.floor(Math.random() * a.length)];
@@ -169,7 +169,8 @@ function save() {
   if (!ok && !notice) {
     notice = document.createElement("div"); notice.id = "save-error"; notice.setAttribute("role", "alert");
     notice.style.cssText = "position:sticky;top:0;z-index:9999;background:#fff0c2;color:#222;padding:12px";
-    notice.innerHTML = 'Progress not saved, try again <button type="button">Try again</button>';
+    notice.innerHTML = 'Progress not saved. Changes are only in memory. Keep this page open. <button type="button">Retry save</button> <button type="button" id="save-feedback">Copy my feedback for the team</button>';
+    notice.querySelector('#save-feedback').onclick = () => H.feedback();
     notice.querySelector("button").onclick = save; document.body.prepend(notice);
   } else if (ok && notice) notice.remove();
   return ok;
@@ -996,6 +997,7 @@ function viewHome() {
   <div class="stack" style="padding-top:8px">
     <div class="spread"><span class="brand">PAYDIRT</span><div class="row">${base ? `<button class="chip" data-a="plan">My plan</button>` : ""}<button class="chip" data-a="jobs">Job hunt</button><button class="chip" data-a="progress">Progress</button><button class="chip" data-a="settings">Settings</button></div></div>
     <h1>Hey ${esc(first())}.</h1>
+    <button class="btn ghost wide" data-a="feedback">Copy my feedback for the team</button>
     ${S.intake ? "" : `<div class="card stack"><b>3 minutes to make this about you</b><p class="small muted">Tell the app about your dishes, training and goals, and it will help you turn them into interview stories.</p><button class="btn wide" data-a="intake">Tell us about you</button></div>`}
     <div class="ticket stack">
       <div class="spread"><span class="label">${esc(m.label)} mode</span><span class="pill warm">${dt}/${m.perDay} today</span></div>
@@ -1326,14 +1328,11 @@ H.survey = () => {
 H.sv = (d, el) => { SV[d.k] = isNaN(+d.v) ? d.v : +d.v; el.parentElement.querySelectorAll(".chip").forEach(c => c.classList.toggle("on", c === el)); };
 H.svm = (d, el) => { const i = SV.hard.indexOf(d.v); i < 0 ? SV.hard.push(d.v) : SV.hard.splice(i, 1); el.classList.toggle("on"); };
 H.svdone = async () => {
-  const secs = (Date.now() - SV.t0) / 1000, comment = ($("#cm").value || "").trim().slice(0, 500);
+  const secs = (Date.now() - SV.t0) / 1000, comment = $("#cm").value || "";
   const score = LAST.body.score;
   const flags = [];
   if (secs < 5) flags.push("rushed");
   if (SV.comfort && SV.comfort === SV.useful && (SV.comfort === 1 || SV.comfort === 5) && secs < 9) flags.push("straight-lined");
-  const relevant = /(question|answer|voice|eye|camera|hard|easy|fast|slow|nerv|interview|panel|help|confus|hear|score|tim|practice|more|less|lesson|feel|like|hate|better|work)/i;
-  const commentUsable = comment.length >= 3 && relevant.test(comment) && !/^(.)\1+$/.test(comment);
-  if (comment && !commentUsable) flags.push("comment-filtered");
   const valid = !flags.includes("rushed") && !flags.includes("straight-lined");
   // Only valid answers change training. Perception gaps are recorded (useful KPI) but never raise difficulty.
   const notes = [];
@@ -1349,8 +1348,9 @@ H.svdone = async () => {
   if (notes.length) S.adapt.notes = notes.slice(-1);
   await appendRecord("survey", { app: VERSION, lessonId: LAST.l.id, attempt: LAST.body.attempt, lessonHash: S.records.filter(r => r.kind === "lesson").slice(-1)[0].hash,
     confidence: +$("#sv-conf").value, nerves: +$("#sv-nerves").value,
-    comfort: SV.comfort, useful: SV.useful, diff: SV.diff, hard: SV.hard, comment: commentUsable ? comment : (comment ? "[filtered]" : ""), secs: Math.round(secs), flags, valid, adaptations: notes, score, at: new Date().toISOString() });
-  save(); toast("Saved");
+    comfort: SV.comfort, useful: SV.useful, diff: SV.diff, hard: SV.hard, comment, secs: Math.round(secs), flags, valid, adaptations: notes, score, at: new Date().toISOString() });
+  if (save()) toast("Saved");
+  else toast("Not saved. Keep this page open; retry saving or copy your feedback.");
   deliver("survey", `Check-in after ${LAST.l.title}: confidence ${$("#sv-conf") ? $("#sv-conf").value : "?"}/10`, { survey: S.records[S.records.length - 1].body });
   // Right after the first Baseline, walk him through his coaching plan before anything else.
   if (LAST.l.id === "baseline" && LAST.body.attempt === 1) viewPlan(); else viewHome();
@@ -1391,8 +1391,35 @@ H.progress = async () => {
       return c0 ? `<div class="card stack"><span class="label">How you feel</span><div class="kv"><span>Confidence (of 10)</span><span>${c0}${c1 != null ? " &rarr; " + c1 : ""}</span><span>Nerves (of 10)</span><span>${n0}${n1 != null ? " &rarr; " + n1 : ""}</span></div></div>` : ""; })()}
     ${S.jobs.length ? `<div class="card stack"><span class="label">Job hunt</span><div class="kv">${STAGES.filter(st => S.jobs.some(j => j.stage === st)).map(st => `<span>${st}</span><span>${S.jobs.filter(j => j.stage === st).length}</span>`).join("")}</div></div>` : ""}
     <div class="card stack"><span class="label">Data integrity</span><p class="small">${ok ? "&#10003; All " + S.records.length + " records passed the local hash-chain consistency check. This is not proof of authenticity or protection against rewriting the local data and hashes." : "Local record consistency could not be confirmed."}</p></div>
+    <button class="btn ghost wide" data-a="feedback">Copy my feedback for the team</button>
     <button class="btn wide" data-a="export">Share my results</button>
   </div>`);
+};
+// Feedback-only export excludes profile fields, lesson transcripts and recordings.
+function feedbackPayload(state = S, pending = saveFailed) {
+  const fields = ["attempt", "confidence", "nerves", "comfort", "useful", "diff", "hard", "comment", "secs", "flags", "valid", "adaptations", "score"];
+  const entries = state.records.filter(r => r.kind === "survey" || r.kind === "intake").map(r => {
+    const b = r.body || {}, item = { kind: r.kind === "intake" ? "check-in" : "survey", lesson: b.lessonId ?? "unknown", timestamp: b.at ?? "unknown", appVersion: b.app ?? "unknown" };
+    for (const k of (r.kind === "intake" ? ["confidence", "nerves"] : fields)) if (Object.prototype.hasOwnProperty.call(b, k)) item[k] = b[k];
+    if (b.comment === "[filtered]") item.contentNote = "Original comment unavailable: historically filtered.";
+    return item;
+  });
+  if (state.intake && !state.records.some(r => r.kind === "intake")) {
+    const b = state.intake;
+    entries.unshift({ kind: "check-in", lesson: "unknown", timestamp: b.at ?? "unknown", appVersion: "unknown", ...Object.fromEntries(["confidence", "nerves"].filter(k => Object.prototype.hasOwnProperty.call(b, k)).map(k => [k, b[k]])) });
+  }
+  return { app: "Paydirt", exportVersion: VERSION, persistence: pending ? "Includes in-memory changes that have not been saved. Keep this page open." : "From current browser state", limitations: "Historical filtered comments and failed writes from closed sessions cannot be recovered. Unknown metadata is marked unknown.", entries };
+}
+H.feedback = () => {
+  const text = JSON.stringify(feedbackPayload(), null, 2);
+  const d = modal(`<h3>Copy my feedback for the team</h3><p>Review your saved feedback and any pending changes below. Nothing is sent automatically.</p><label for="feedback-preview">Feedback preview</label><textarea id="feedback-preview" readonly style="min-height:240px"></textarea><p id="feedback-status" role="status"></p><button class="btn" id="feedback-copy">Copy feedback</button><button class="btn ghost" id="feedback-close">Close</button>`);
+  const area = d.querySelector("#feedback-preview"), status = d.querySelector("#feedback-status");
+  area.value = text; // Assign as text, never interpolate user comments into HTML.
+  d.querySelector("#feedback-copy").onclick = async () => {
+    try { await navigator.clipboard.writeText(text); status.textContent = "Copied: paste it into your Claude chat."; }
+    catch (e) { status.textContent = "Copy did not complete. Select and copy the preview manually. Nothing has been sent."; area.focus(); area.select(); }
+  };
+  d.querySelector("#feedback-close").onclick = () => d.remove();
 };
 H.export = async () => {
   const data = { app: "Paydirt", version: VERSION, exportedAt: new Date().toISOString(), profile: { name: S.profile.name, job: S.profile.job, created: S.profile.created },
