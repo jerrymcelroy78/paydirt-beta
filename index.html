@@ -407,11 +407,22 @@ function lineId(ch, text) {
 }
 let AUDIO = null, AC = null, TH = null;
 const HEADS = {}, bufCache = new Map();
-fetch("audio/index.json").then(r => r.ok ? r.json() : null).then(j => { AUDIO = j; }).catch(() => {});
-function audioBuffer(id, text) {
+const audioReady = fetch("audio/index.json").then(r => r.ok ? r.json() : null).then(j => { AUDIO = j; return j; }).catch(() => null);
+function normalizedAudioText(text) {
+  return text.normalize("NFC").replace(/[‘’]/g, "'").replace(/[“”]/g, '"').replace(/\s+/g, " ").trim();
+}
+function audioMatch(id, text) {
+  if (!AUDIO) return { key: null, outcome: "manifest-unavailable" };
   const key = lineId(id, text);
-  if (!AC || !AUDIO || !AUDIO[key]) return null;
-  if (!bufCache.has(key)) bufCache.set(key, fetch("audio/" + key + ".mp3").then(r => r.arrayBuffer()).then(b => AC.decodeAudioData(b)).catch(() => null));
+  if (AUDIO[key]?.ch === id && AUDIO[key].text === text) return { key, outcome: "exact" };
+  const normalized = normalizedAudioText(text);
+  const matches = Object.keys(AUDIO).filter(k => AUDIO[k].ch === id && normalizedAudioText(AUDIO[k].text) === normalized);
+  return matches.length === 1 ? { key: matches[0], outcome: "typography-match" } : { key: null, outcome: matches.length ? "ambiguous" : "missing" };
+}
+function audioBuffer(id, text) {
+  const { key } = audioMatch(id, text);
+  if (!AC || !key) return null;
+  if (!bufCache.has(key)) bufCache.set(key, fetch("audio/" + key + ".mp3").then(r => { if (!r.ok) throw Error("Audio HTTP " + r.status); return r.arrayBuffer(); }).then(b => AC.decodeAudioData(b)).catch(() => { bufCache.delete(key); return null; }));
   return bufCache.get(key);
 }
 async function initHeads(ids, onStatus) {
@@ -483,57 +494,48 @@ function mouth(id, on) {
   mouthTimer = setInterval(() => m.setAttribute("ry", (2 + Math.random() * 8).toFixed(1)), 95);
 }
 
-/* ============ VOICE OUT (TTS) ============ */
+/* ============ RECORDED VOICE OUT ============ */
 const playingSources = new Set();
-let voices = [];
-function loadVoices() { try { voices = speechSynthesis.getVoices().filter(v => /^en(-|_)/i.test(v.lang)); } catch (e) {} }
-if ("speechSynthesis" in window) { loadVoices(); speechSynthesis.onvoiceschanged = loadVoices; }
-const FEM = ["Samantha", "Karen", "Moira", "Tessa", "Ava", "Allison", "Susan", "Zoe", "Nicky", "Victoria", "Serena", "Fiona"];
-const MAL = ["Daniel", "Alex", "Aaron", "Tom", "Evan", "Nathan", "Oliver", "Arthur", "Rishi", "Fred", "Gordon", "Reed"];
-const voiceCache = {};
-function voiceFor(id) {
-  if (voiceCache[id] !== undefined) return voiceCache[id];
-  const c = CH[id], names = c.g === "f" ? FEM : MAL;
-  const used = Object.values(voiceCache);
-  const rank = v => (/(Premium|Enhanced)/.test(v.name) ? 2 : 0) + (/en-US/.test(v.lang) ? 1 : 0);
-  const cands = voices.filter(v => names.some(n => v.name.includes(n))).sort((a, b) => rank(b) - rank(a));
-  const v = cands.find(v => !used.includes(v)) || cands[0] || null;
-  voiceCache[id] = v; return v;
+function audioUnavailable(text) {
+  let note = document.getElementById("audio-unavailable");
+  if (!note) {
+    note = document.createElement("p"); note.id = "audio-unavailable";
+    note.className = "small muted"; note.setAttribute("role", "status");
+    const host = document.getElementById("app"); if (host) host.appendChild(note);
+  }
+  note.textContent = text ? "Audio unavailable — read the text: " + text : "";
+  note.hidden = !text;
 }
-// Recorded human voice when available: lip-synced on the 3D character, or played alone (prep screen).
-// Falls back to the device voice only if a line has no recording.
+function traceAudio(event) { /* Debug copy adds console instrumentation here. */ }
 async function speak(text, id) {
   const generation = mediaGeneration;
+  await audioReady;
+  if (generation !== mediaGeneration) return;
+  const match = audioMatch(id, text);
   const p = audioBuffer(id, text), buf = p && await p;
   if (generation !== mediaGeneration) return;
-  if (buf) {
-    const meta = AUDIO[lineId(id, text)], h = HEADS[id];
+  const event = { character: id, text, requestedKey: lineId(id, text), manifestKey: match.key, lookup: match.outcome, source: "text-only" };
+  audioUnavailable("");
+  if (buf && AC && AC.state !== "running") {
+    try { await AC.resume(); } catch (e) { audioRetryNotice(true); }
+    if (generation !== mediaGeneration) return;
+  }
+  if (buf && AC?.state === "running") {
+    const meta = AUDIO[match.key], h = HEADS[id];
     return new Promise(res => {
       let done = false; const fin = () => { if (!done) { done = true; res(); } };
       setTimeout(fin, buf.duration * 1000 + 3000);
       if (h) {
-        try { h.speakAudio({ audio: buf, words: meta.words, wtimes: meta.wtimes, wdurations: meta.wdurations }, { lipsyncLang: "en" }); h.speakMarker(fin); return; } catch (e) {}
+        try { h.speakAudio({ audio: buf, words: meta.words, wtimes: meta.wtimes, wdurations: meta.wdurations }, { lipsyncLang: "en" }); h.speakMarker(fin); traceAudio({ ...event, source: "mp3-avatar" }); return; } catch (e) {}
       }
-      const src = AC.createBufferSource(); src.buffer = buf; src.connect(AC.destination); playingSources.add(src); src.onended = () => { playingSources.delete(src); fin(); }; src.start();
+      try {
+        const src = AC.createBufferSource(); src.buffer = buf; src.connect(AC.destination); playingSources.add(src); src.onended = () => { playingSources.delete(src); fin(); }; src.start();
+        traceAudio({ ...event, source: "mp3-buffer" });
+      } catch (e) { audioUnavailable(text); traceAudio({ ...event, reason: "playback-failed" }); fin(); }
     });
   }
-  return speakTTS(text, id);
-}
-function speakTTS(text, id) {
-  return new Promise(res => {
-    let done = false; const fin = () => { if (done) return; done = true; mouth(id, false); res(); };
-    mouth(id, true);
-    if (!("speechSynthesis" in window)) { setTimeout(fin, 600 + text.length * 55); return; }
-    try {
-      speechSynthesis.cancel();
-      const u = new SpeechSynthesisUtterance(text), c = CH[id];
-      const v = voiceFor(id); if (v) u.voice = v;
-      u.pitch = c.pitch; u.rate = c.rate * (S.settings.mode === "boot" ? 1.04 : 1);
-      u.onend = fin; u.onerror = fin;
-      speechSynthesis.speak(u);
-    } catch (e) { setTimeout(fin, 600 + text.length * 55); return; }
-    setTimeout(fin, 2500 + text.length * 95); // iOS sometimes never fires onend
-  });
+  audioUnavailable(text);
+  traceAudio({ ...event, reason: !match.key ? match.outcome : !buf ? "fetch-or-decode-unavailable" : "context-not-running" });
 }
 
 /* ============ VOICE IN (push-to-talk) ============ */
@@ -901,7 +903,7 @@ function stopSession() {
   if (activeListener) activeListener.cancel();
   if (cancelAnswer) { const cancel = cancelAnswer; cancelAnswer = null; cancel(); }
   recRelease(); stopCamera(); for (const src of playingSources) { try { src.stop(); } catch (e) {} } playingSources.clear(); V.phase = null; V.acc = null; V.onFrame = null;
-  try { speechSynthesis.cancel(); } catch (e) {} disposeHeads();
+  disposeHeads();
 }
 function render(html, preserveSession = false) {
   if (!preserveSession) stopSession();
@@ -979,7 +981,6 @@ function unlockAudio() {
     if (!AC) AC = new (window.AudioContext || window.webkitAudioContext)();
     Promise.resolve(AC.resume()).then(() => audioRetryNotice(AC.state !== "running"), () => audioRetryNotice(true));
   } catch (e) { audioRetryNotice(true); }
-  try { const u = new SpeechSynthesisUtterance(" "); u.volume = 0; speechSynthesis.speak(u); } catch (e) {}
 }
 
 /* --- Home --- */
@@ -1241,7 +1242,7 @@ async function runLesson(id) {
 H.quit = () => {
   const d = modal(`<h3>End this round?</h3><p class="muted">Nothing from this round will be saved. You can start it again any time.</p><div class="row"><button class="btn" id="q1">End round</button><button class="btn ghost" id="q2">Keep going</button></div>`);
   d.querySelector("#q2").onclick = () => d.remove();
-  d.querySelector("#q1").onclick = () => { d.remove(); if (RUN) RUN.quit = true; try { speechSynthesis.cancel(); } catch (e) {} V.phase = null; V.acc = null; V.onFrame = null; stopCamera(); Object.values(HEADS).forEach(h => { try { h.stopSpeaking(); } catch (e) {} }); disposeHeads(); viewHome(); };
+  d.querySelector("#q1").onclick = () => { d.remove(); if (RUN) RUN.quit = true; V.phase = null; V.acc = null; V.onFrame = null; stopCamera(); Object.values(HEADS).forEach(h => { try { h.stopSpeaking(); } catch (e) {} }); disposeHeads(); viewHome(); };
 };
 
 /* --- Results --- */
