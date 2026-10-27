@@ -1,0 +1,1444 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0f1720">
+<title>Paydirt — Test version</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
+<style>
+/* Layout: one-column phone app. Interviewers sit at the very top of the screen, right under the front camera,
+   so looking at their eyes reads as eye contact. Kitchen subway-tile stage, saffron "ticket" accents. */
+:root{
+  --ink:#0f1720; --panel:#17222d; --panel2:#1e2b38; --line:#2c3b4a;
+  --text:#eef2f5; --muted:#9db0c0; --saffron:#f4b740; --saffron-ink:#2a1d00;
+  --mint:#4fd1a5; --sky:#7cc4ff; --soft:#c9a7ff;
+  --display:"Bricolage Grotesque", "Avenir Next", system-ui, sans-serif;
+  --body:"Atkinson Hyperlegible", -apple-system, system-ui, sans-serif;
+  --r:14px; color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;background:var(--ink);color:var(--text);font-family:var(--body);font-size:17px;line-height:1.45;-webkit-text-size-adjust:100%}
+body{padding:env(safe-area-inset-top,0) 0 env(safe-area-inset-bottom,0)}
+#app{max-width:560px;margin:0 auto;min-height:100%;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:12px 32px}
+h1,h2,h3{font-family:var(--display);line-height:1.1;margin:0;text-wrap:balance}
+h1{font-size:2.1rem;font-weight:800;letter-spacing:-.02em}
+h2{font-size:1.45rem;font-weight:700}
+h3{font-size:1.1rem;font-weight:700}
+p{margin:0}
+.muted{color:var(--muted)}
+.small{font-size:.86rem}
+.label{font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:700}
+.stack{display:flex;flex-direction:column;gap:14px}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.spread{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:16px}
+.btn{appearance:none;border:0;border-radius:999px;padding:14px 22px;font:700 1rem var(--body);background:var(--saffron);color:var(--saffron-ink);cursor:pointer;min-height:48px}
+.btn.ghost{background:transparent;color:var(--text);border:1.5px solid var(--line)}
+.btn.mint{background:var(--mint);color:#06281d}
+.btn.wide{width:100%}
+.btn:focus-visible,.chip:focus-visible,.opt:focus-visible{outline:3px solid var(--sky);outline-offset:2px}
+.btn[disabled]{opacity:.45}
+input[type=text],textarea,select{width:100%;background:var(--panel2);color:var(--text);border:1.5px solid var(--line);border-radius:12px;padding:12px;font:1rem var(--body)}
+textarea{min-height:110px;resize:vertical}
+.chip{appearance:none;border:1.5px solid var(--line);background:var(--panel2);color:var(--text);border-radius:999px;padding:9px 14px;font:600 .92rem var(--body);cursor:pointer}
+.chip.on{background:var(--saffron);color:var(--saffron-ink);border-color:var(--saffron)}
+.opt{appearance:none;text-align:left;width:100%;border:1.5px solid var(--line);background:var(--panel);color:var(--text);border-radius:var(--r);padding:14px;cursor:pointer;font:inherit;display:flex;flex-direction:column;gap:4px}
+.opt.on{border-color:var(--saffron);box-shadow:0 0 0 1px var(--saffron) inset}
+.opt b{font-family:var(--display);font-size:1.08rem}
+.ticket{background:repeating-linear-gradient(90deg,transparent 0 8px,var(--line) 8px 10px) top/100% 2px no-repeat, var(--panel);border-radius:4px 4px var(--r) var(--r);padding:16px;border:1px solid var(--line)}
+.brand{font-family:var(--display);font-weight:800;letter-spacing:.06em;font-size:.85rem;color:var(--saffron)}
+/* lesson path */
+.path{display:flex;flex-direction:column;gap:10px}
+.step{display:grid;grid-template-columns:44px 1fr auto;gap:12px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:12px;color:var(--text);text-align:left;font:inherit;width:100%;cursor:pointer}
+.step[disabled]{opacity:.5;cursor:default}
+.step .num{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;font-family:var(--display);font-weight:800;background:var(--panel2);border:1.5px solid var(--line)}
+.step.done .num{background:var(--mint);color:#06281d;border-color:var(--mint)}
+.step.next{border-color:var(--saffron)}
+.step.next .num{background:var(--saffron);color:var(--saffron-ink);border-color:var(--saffron)}
+.step.measure .num{border-style:dashed}
+.pill{font-size:.75rem;font-weight:700;padding:4px 9px;border-radius:999px;background:var(--panel2);color:var(--muted);white-space:nowrap}
+.pill.good{background:rgba(79,209,165,.15);color:var(--mint)}
+.pill.warm{background:rgba(244,183,64,.15);color:var(--saffron)}
+/* stage */
+.stage{position:relative;border-radius:0 0 22px 22px;margin:-12px calc(-1 * max(16px,env(safe-area-inset-left,0px))) 0;padding:8px 10px 12px;
+  background:
+   linear-gradient(180deg,rgba(15,23,32,.0),rgba(15,23,32,.55)),
+   repeating-linear-gradient(0deg,#d9dfe3 0 22px,#b9c2c8 22px 24px),
+   #d9dfe3;}
+.stage .tiles{position:absolute;inset:0;border-radius:inherit;background:repeating-linear-gradient(90deg,transparent 0 46px,rgba(120,132,140,.55) 46px 48px);pointer-events:none}
+.faces{position:relative;display:flex;justify-content:space-between;align-items:flex-end;gap:6px}
+.faces.n1{justify-content:center}
+.face{position:relative;display:flex;flex-direction:column;align-items:center;transition:transform .3s, filter .3s}
+.faces.n1 .face{width:64%}.faces.n2 .face{width:44%}.faces.n3 .face{width:32%}
+.face svg{width:100%;height:auto;display:block;border-radius:50% 50% 12px 12px;filter:drop-shadow(0 6px 10px rgba(0,0,0,.25))}
+.avbox{position:relative;width:100%;aspect-ratio:200/220}
+.avbox>div{position:absolute;inset:0}
+.avbox .th{border-radius:50% 50% 12px 12px;overflow:hidden}
+.avbox .th canvas{display:block}
+.face .tag{margin-top:-6px;background:var(--ink);color:var(--text);font-size:.72rem;font-weight:700;padding:3px 9px;border-radius:999px;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+.face.dim{filter:saturate(.55) brightness(.85);transform:scale(.94)}
+.face.speaking .tag{background:var(--saffron);color:var(--saffron-ink)}
+.face .ring{position:absolute;inset:-4px -4px 18px -4px;border-radius:50% 50% 16px 16px;border:4px solid transparent;transition:border-color .2s}
+.face.contact .ring{border-color:var(--mint)}
+.face.target .ring{border-color:var(--sky);animation:pulse 1s infinite}
+@keyframes pulse{50%{opacity:.35}}
+.lid{transform-box:fill-box;transform-origin:center top;transform:scaleY(0);transition:transform .08s}
+.blink .lid{transform:scaleY(1)}
+.nod{animation:nod 2.8s ease-in-out infinite}
+@keyframes nod{0%,70%,100%{transform:translateY(0)}80%{transform:translateY(3px)}90%{transform:translateY(0)}}
+@media (prefers-reduced-motion:reduce){.nod,.face.target .ring{animation:none}}
+.caption{font-family:var(--display);font-size:1.25rem;font-weight:700;line-height:1.25;text-wrap:balance;min-height:3.2em}
+.live-tx{color:var(--muted);font-size:.95rem;min-height:2.6em;max-height:7.5em;overflow:auto}
+.mic{width:100%;min-height:76px;border-radius:22px;font-size:1.15rem}
+.mic.rec{background:var(--mint);color:#06281d;animation:pulse 1.6s infinite}
+.dots{display:flex;gap:6px}.dots i{width:8px;height:8px;border-radius:50%;background:var(--line)}.dots i.on{background:var(--saffron)}.dots i.done{background:var(--mint)}
+#cam{position:fixed;right:max(12px,env(safe-area-inset-right,0px));bottom:calc(12px + env(safe-area-inset-bottom,0px));width:92px;height:122px;object-fit:cover;border-radius:14px;transform:scaleX(-1);border:2px solid var(--line);z-index:5;background:#000}
+#cam.hide{width:2px;height:2px;opacity:.01;border:0;pointer-events:none}
+.eyedot{display:inline-flex;align-items:center;gap:6px;font-size:.8rem;color:var(--muted)}
+.eyedot i{width:10px;height:10px;border-radius:50%;background:var(--line)}
+.eyedot.on i{background:var(--mint)}
+/* results */
+.score{display:grid;grid-template-columns:118px 1fr;gap:16px;align-items:center}
+.ringsvg{width:118px;height:118px}
+.bar{height:10px;border-radius:99px;background:var(--panel2);overflow:hidden}
+.bar>i{display:block;height:100%;background:var(--mint);border-radius:99px}
+.bar.s>i{background:var(--saffron)}
+.kv{display:grid;grid-template-columns:1fr auto;gap:6px 12px;font-variant-numeric:tabular-nums}
+.kv span:nth-child(even){text-align:right;font-weight:700}
+details{background:var(--panel2);border-radius:12px;padding:10px 12px}
+summary{cursor:pointer;font-weight:700}
+.tag2{display:inline-block;font-size:.75rem;padding:2px 8px;border-radius:99px;background:rgba(124,196,255,.14);color:var(--sky);margin:2px 4px 0 0}
+.scale{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.scale .chip{padding:10px 0;text-align:center}
+.overlay{position:fixed;inset:0;background:rgba(8,12,17,.82);display:grid;place-items:center;z-index:20;padding:20px}
+.overlay .card{max-width:420px;width:100%}
+.spark{width:100%;height:70px}
+.tbl{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums;font-size:.92rem}
+.tbl td,.tbl th{padding:7px 4px;border-bottom:1px solid var(--line);text-align:right}
+.tbl td:first-child,.tbl th:first-child{text-align:left}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(20px + env(safe-area-inset-bottom,0px));background:var(--mint);color:#06281d;font-weight:700;padding:10px 18px;border-radius:999px;z-index:30}
+</style>
+</head>
+<body>
+<div role="note" style="padding:10px 16px;background:#fff3cd;color:#332701;text-align:center">TEST VERSION: Ellen’s 3D avatar is unavailable; her simple face is shown. Practice, text questions and audio remain available.</div>
+<!-- V4: automatic result/audio submission forms removed. -->
+
+
+<div id="app"></div>
+<video id="cam" class="hide" playsinline muted autoplay></video>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.186/build/three.module.js/+esm",
+  "three/examples/": "https://cdn.jsdelivr.net/npm/three@0.186/examples/",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.186/examples/jsm/"
+} }
+</script>
+<script type="module">
+"use strict";
+/* ============ CORE ============ */
+const VERSION = "0.9.0-beta.2";
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const pick = a => a[Math.floor(Math.random() * a.length)];
+const clamp = (x, a = 0, b = 1) => Math.max(a, Math.min(b, x));
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const today = () => new Date().toISOString().slice(0, 10);
+const DAY = 86400000;
+let mediaGeneration = 0, activeListener = null, cancelAnswer = null, cancelSetup = null;
+const H = {}; // click handlers, keyed by data-a
+const IS_IOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+
+const store = {
+  get(k, d) { try { const v = localStorage.getItem("pd_" + k); return v ? JSON.parse(v) : d; } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem("pd_" + k, JSON.stringify(v)); } catch (e) { return false; } return true; }
+};
+function defaultState() {
+  return { v: 1, profile: { name: "", job: "Prep / line cook", created: Date.now(), setupDone: false },
+    settings: { mode: "steady", camera: true, captions: true, selfView: false, input: "voice", eyeLight: true, transcripts: true },
+    intake: null, consent: { record: false, share: false }, jobs: [], outbox: [], progress: {}, records: [], lastHash: "GENESIS", adapt: { calm: false, notes: [] } };
+}
+let S = store.get("state", null) || defaultState();
+let saveFailed = false;
+function save() {
+  const ok = store.set("state", S); saveFailed = !ok;
+  let notice = document.getElementById("save-error");
+  if (!ok && !notice) {
+    notice = document.createElement("div"); notice.id = "save-error"; notice.setAttribute("role", "alert");
+    notice.style.cssText = "position:sticky;top:0;z-index:9999;background:#fff0c2;color:#222;padding:12px";
+    notice.innerHTML = 'Progress not saved, try again <button type="button">Try again</button>';
+    notice.querySelector("button").onclick = save; document.body.prepend(notice);
+  } else if (ok && notice) notice.remove();
+  return ok;
+}
+const first = () => (S.profile.name || "there").split(" ")[0];
+
+async function sha(s) {
+  const b = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s));
+  return [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, "0")).join("");
+}
+// Append-only, hash-chained log: every lesson and survey links to the one before it,
+// This checks local chain consistency only; data and hashes can both be rewritten.
+async function appendRecord(kind, body) {
+  const rec = { kind, body, prev: S.lastHash };
+  rec.hash = await sha(rec.prev + JSON.stringify(body));
+  S.records.push(rec); S.lastHash = rec.hash; save(); return rec;
+}
+async function verifyChain() {
+  let p = "GENESIS";
+  for (const r of S.records) { if (r.prev !== p) return false; if (await sha(p + JSON.stringify(r.body)) !== r.hash) return false; p = r.hash; }
+  return true;
+}
+
+/* ============ CONTENT ============ */
+const MODES = {
+  easy:      { label: "Easy Going", q: 3, fu: 0, pass: 65, perDay: 1, desc: "3 questions, no follow-ups, all the time you need. Great for day one." },
+  steady:    { label: "Steady", q: 4, fu: 1, pass: 70, perDay: 1, desc: "4 questions and a friendly follow-up when an answer is short." },
+  intensive: { label: "Intensive", q: 5, fu: 2, pass: 75, perDay: 2, desc: "5 questions, real follow-ups, 2 sessions a day." },
+  boot:      { label: "Boot Camp", q: 6, fu: 3, pass: 80, perDay: 3, rapid: true, desc: "Fastest path. 6 questions, tougher follow-ups, a rapid-fire round, 3 short sessions a day spaced a few hours apart." }
+};
+const CH = {
+  marisol: { name: "Chef Marisol Reyes", short: "Chef Marisol", role: "Executive Chef", g: "f", skin: "#c68a5c", hair: "#2b1b14", hs: "bun", shirt: "#f4f4f0", hat: true, pitch: 1.05, rate: 0.98, acks: ["Love that.", "Good, thank you.", "Nice. I can work with that."] },
+  dan:     { name: "Dan Whitaker", short: "Dan", role: "General Manager", g: "m", skin: "#e8b996", hair: "#6b4a2b", hs: "short", shirt: "#2f4a6d", glasses: true, pitch: 0.92, rate: 1.0, acks: ["Okay, good.", "Got it. Thanks.", "Yeah, that's helpful."] },
+  keisha:  { name: "Keisha Grant", short: "Keisha", role: "Hiring Coordinator", g: "f", skin: "#8a5a3c", hair: "#151010", hs: "curly", shirt: "#7a3e6e", pitch: 1.1, rate: 1.0, acks: ["Great!", "Thanks for sharing that.", "Wonderful."] },
+  tony:    { name: "Tony Russo", short: "Tony", role: "Sous Chef", g: "m", skin: "#d9a27a", hair: "#1d1d1d", hs: "bald", shirt: "#f4f4f0", hat: true, beard: true, pitch: 0.82, rate: 1.08, acks: ["Alright.", "Good. Next one.", "Okay, I hear you."] },
+  ellen:   { name: "Ellen Park", short: "Ellen", role: "Regular customer", g: "f", skin: "#efc9a4", hair: "#a3a3a3", hs: "long", shirt: "#4f7a5a", glasses: true, pitch: 1.0, rate: 0.95, acks: ["Alright.", "Okay.", "Mm-hm."] },
+  jordan:  { name: "Jordan Lee", short: "Jordan", role: "Line cook", g: "m", skin: "#e0b48a", hair: "#3a2a1a", hs: "curly", shirt: "#333a44", pitch: 1.02, rate: 1.06, acks: ["Nice.", "Ha, fair.", "Cool."] }
+};
+// type: greet | intro | why | story | short | skill | close | reply | rapid
+const FORMS = [
+  [ { by: "dan", t: "greet", q: "Hey {name}, I'm Dan. I manage the place here. Thanks for coming in. How's your day going so far?" },
+    { by: "dan", t: "intro", q: "So... tell me a little bit about yourself." },
+    { by: "dan", t: "why", q: "Okay. And what made you want to work in our kitchen?" },
+    { by: "dan", t: "story", q: "Gotcha. Tell me about a time you had to work really fast, like, under pressure." },
+    { by: "dan", t: "why", q: "Nice. What'd your culinary program teach you that you'd bring in here?" },
+    { by: "dan", t: "short", q: "Alright. What's your availability looking like?" },
+    { by: "dan", t: "close", q: "Cool. Do you have any questions for me?" } ],
+  [ { by: "dan", t: "greet", q: "Good to see you, {name}. Did you find the place okay?" },
+    { by: "dan", t: "intro", q: "Walk me through your background." },
+    { by: "dan", t: "why", q: "What interests you about this job?" },
+    { by: "dan", t: "story", q: "Tell me about a time you made a mistake and how you handled it." },
+    { by: "dan", t: "why", q: "How would a teacher or a teammate describe you?" },
+    { by: "dan", t: "short", q: "Can you work weekends and holidays?" },
+    { by: "dan", t: "close", q: "Any questions for me before we wrap up?" } ],
+  [ { by: "dan", t: "greet", q: "Hey {name}, thanks for coming in today. How are you doing?" },
+    { by: "dan", t: "intro", q: "Tell me about yourself and how you got into cooking." },
+    { by: "dan", t: "why", q: "Why should we hire you?" },
+    { by: "dan", t: "story", q: "Tell me about a time you worked on a team to get something done." },
+    { by: "dan", t: "why", q: "What's one thing you're working to get better at?" },
+    { by: "dan", t: "short", q: "When could you start?" },
+    { by: "dan", t: "close", q: "What questions do you have for me?" } ]
+];
+const TEMP = { "165": ["165", "one sixty five", "one hundred sixty five", "one sixty-five"] };
+const LESSONS = [
+  { id: "baseline", kind: "measure", form: 0, title: "Baseline Interview", sub: "Your starting line", cast: ["dan"],
+    goal: "Just be yourself. This is a snapshot of where you start, so we can show how fast you improve. There's no passing or failing here.",
+    tips: ["Prop your phone at eye level, about an arm's length away, with light on your face.", "Dan's face sits right under your camera. Looking at his eyes is eye contact.", "Tap the big button, answer out loud, then tap Done."] },
+  { id: "first30", title: "First 30 Seconds", sub: "Greeting and “Tell me about yourself”", cast: ["keisha"], focus: "eye",
+    goal: "Nail the opening: a warm hello, your name, and a short story about who you are.",
+    tips: ["Say “Nice to meet you” and use her name once.", "Tell-me-about-yourself formula: Present → Past → Future, in 3 to 5 sentences.", "Look at her eyes when you start and finish a sentence. Glancing away to think is normal."],
+    example: "I'm {name}. I just finished four years of culinary arts, where I earned my food safety and management certifications. I love the pace of a kitchen and I learn fast. I'm looking for a place where I can start contributing right away and keep growing.",
+    sets: [
+      [ { by: "keisha", t: "greet", q: "Hi! You must be {name}. I'm Keisha, I coordinate hiring here. How are you today?" },
+        { by: "keisha", t: "intro", q: "So tell me a little about yourself." },
+        { by: "keisha", t: "why", q: "What made you pick culinary arts in school?" },
+        { by: "keisha", t: "short", q: "What's something you enjoy doing outside of cooking?" },
+        { by: "keisha", t: "why", q: "What are you hoping to get out of your first kitchen job?" },
+        { by: "keisha", t: "short", q: "Are you comfortable with early mornings?" } ],
+      [ { by: "keisha", t: "greet", q: "Hey {name}, welcome in! I'm Keisha. Was it easy getting here?" },
+        { by: "keisha", t: "intro", q: "Give me the quick version of who you are." },
+        { by: "keisha", t: "why", q: "How did you hear about this position?" },
+        { by: "keisha", t: "short", q: "What's your favorite thing to cook?" },
+        { by: "keisha", t: "why", q: "What would your friends say you're good at?" },
+        { by: "keisha", t: "short", q: "Do you have reliable transportation?" } ] ] },
+  { id: "star", title: "Stories That Stick", sub: "Answer with real examples", cast: ["marisol"], focus: "substance",
+    goal: "Turn “tell me about a time” questions into short, clear stories.",
+    tips: ["Use STAR: Situation (where and when), Task, Action (what YOU did, so say “I”), Result (how it turned out or what you learned).", "School kitchen, class projects, family dinners and sports all count as experience.", "Aim for 30 to 90 seconds per story."],
+    example: "In my second year we had a catering event for 120 people and our team was short two cooks. My job was the sides. I prepped my mise en place the night before, made a checklist, and helped plate when I finished early. We sent everything out on time, and my instructor asked me to lead a station at the next event.",
+    sets: [
+      [ { by: "marisol", t: "story", q: "Tell me about a time you had a lot of tasks at once. How did you handle it?" },
+        { by: "marisol", t: "story", q: "Tell me about a time something went wrong in the kitchen." },
+        { by: "marisol", t: "story", q: "Tell me about a dish you're proud of." },
+        { by: "marisol", t: "story", q: "Tell me about a time you helped a teammate." },
+        { by: "marisol", t: "story", q: "Tell me about a time an instructor gave you feedback. What did you do with it?" },
+        { by: "marisol", t: "story", q: "Tell me about a time you had to learn something quickly." } ],
+      [ { by: "marisol", t: "story", q: "Tell me about a time you were really busy and still got it done." },
+        { by: "marisol", t: "story", q: "Tell me about a mistake you made and what you learned." },
+        { by: "marisol", t: "story", q: "Tell me about a time you worked with someone who was hard to work with." },
+        { by: "marisol", t: "story", q: "Tell me about a time you went above what was asked." },
+        { by: "marisol", t: "story", q: "Tell me about a time you had to stay calm." },
+        { by: "marisol", t: "story", q: "Tell me about something you taught someone else." } ] ] },
+  { id: "training", title: "Selling Your Training", sub: "Show what you already know", cast: ["marisol"], focus: "substance",
+    goal: "Your four years of culinary training and your certifications are your edge. Learn to say them out loud with confidence.",
+    tips: ["Answer the skill questions plainly: number first, then a little why.", "Turn “no restaurant experience” into “four years of hands-on kitchen training.”", "Name real skills: knife cuts, sanitation, temperatures, FIFO, station setup."],
+    example: "I don't have a restaurant job on my record yet, but I have four years of hands-on kitchen training and my food safety certification. I know my temps, I keep a clean station, and I take direction well. I'm ready to work.",
+    sets: [
+      [ { by: "marisol", t: "skill", q: "Quick check. What's the safe internal temperature for cooking chicken?", expect: [TEMP["165"]] },
+        { by: "marisol", t: "skill", q: "What's the temperature danger zone?", expect: [["41", "40", "forty"], ["135", "140"]] },
+        { by: "marisol", t: "skill", q: "How do you prevent cross-contamination?", expect: [["separate", "different", "color", "board", "wash", "sanit", "glove"]] },
+        { by: "marisol", t: "why", q: "Tell me about your food safety certification and what it means for my kitchen." },
+        { by: "marisol", t: "why", q: "You haven't worked in a restaurant yet. Why should I trust you on the line?" },
+        { by: "marisol", t: "skill", q: "Which knife cuts can you do, and which one is your best?", expect: [["julienne", "brunoise", "dice", "chiffonade", "batonnet", "mince", "chop", "paysanne"]] } ],
+      [ { by: "marisol", t: "skill", q: "What's the minimum hot-holding temperature?", expect: [["135"]] },
+        { by: "marisol", t: "skill", q: "Where should raw chicken go in the walk-in?", expect: [["bottom", "lowest", "below", "under"]] },
+        { by: "marisol", t: "skill", q: "What does FIFO mean in a kitchen?", expect: [["first in"], ["first out"]] },
+        { by: "marisol", t: "why", q: "What did four years of culinary teach you about working clean?" },
+        { by: "marisol", t: "why", q: "What station would you love to work, and why?" },
+        { by: "marisol", t: "why", q: "How do you keep your station organized during a rush?" } ] ] },
+  { id: "check1", kind: "measure", form: 1, title: "Checkpoint Interview", sub: "Measure your progress", cast: ["dan"],
+    goal: "Same kind of interview as your baseline, with new questions. This shows how far you've come.",
+    tips: ["Use everything you've practiced: eye contact, STAR stories, your training.", "No passing or failing. It's a measurement."] },
+  { id: "panel2", title: "Two-Person Panel", sub: "Talk to the right person", cast: ["marisol", "dan"], focus: "eye",
+    goal: "In a panel, answer the person who asked, and include the other person too.",
+    tips: ["Turn your head a little toward whoever asked, like you would at a real table.", "Start and finish your answer looking at the person who asked.", "Glance at the other interviewer once in the middle of longer answers."],
+    sets: [
+      [ { by: "dan", t: "greet", q: "Hi {name}. I'm Dan, and this is Chef Marisol. Thanks for sitting down with us." },
+        { by: "marisol", t: "intro", q: "Tell us a little about yourself." },
+        { by: "dan", t: "why", q: "Why this restaurant?" },
+        { by: "marisol", t: "story", q: "Tell me about a time you worked a busy service." },
+        { by: "dan", t: "short", q: "What hours are you looking for?" },
+        { by: "marisol", t: "skill", q: "What's the safe internal temperature for chicken?", expect: [TEMP["165"]] },
+        { by: "dan", t: "close", q: "What questions do you have for either of us?" } ],
+      [ { by: "marisol", t: "greet", q: "Hey {name}, I'm Chef Marisol, and this is Dan, our GM. How are you?" },
+        { by: "dan", t: "intro", q: "Walk us through your background." },
+        { by: "marisol", t: "story", q: "Tell me about a time you had to fix a mistake fast." },
+        { by: "dan", t: "why", q: "Where do you want to be a year from now?" },
+        { by: "marisol", t: "why", q: "What's your strongest kitchen skill?" },
+        { by: "dan", t: "short", q: "How soon could you start?" },
+        { by: "marisol", t: "close", q: "Anything you want to ask us?" } ] ] },
+  { id: "curve", title: "Curveballs", sub: "Tough questions, calm answers", cast: ["dan"], focus: "substance",
+    goal: "Handle the questions people dread with simple, honest formulas.",
+    tips: ["Weakness: name a real but safe one, plus what you're doing about it.", "Pay: “I'm flexible. What's the range for this role?”", "Always have two questions ready, like “What does a great first month look like?” and “What do you like most about working here?”", "It's fine to say “Good question, let me think for a second.”"],
+    sets: [
+      [ { by: "dan", t: "why", q: "What's your biggest weakness?" },
+        { by: "dan", t: "why", q: "Where do you see yourself in five years?" },
+        { by: "dan", t: "why", q: "What would you do if you saw a coworker skip washing their hands?", expect: [["tell", "remind", "say", "talk", "chef", "manager", "supervisor"]] },
+        { by: "dan", t: "short", q: "What kind of pay are you expecting?" },
+        { by: "dan", t: "why", q: "Why should we pick you over someone with more experience?" },
+        { by: "dan", t: "story", q: "Tell me about a time you disagreed with someone." },
+        { by: "dan", t: "close", q: "Last thing. What questions do you have for me?" } ],
+      [ { by: "dan", t: "why", q: "What's something you're not good at yet?" },
+        { by: "dan", t: "why", q: "Why did you choose cooking instead of college?" },
+        { by: "dan", t: "why", q: "What would you do if a chef told you to do something you thought was unsafe?", expect: [["ask", "tell", "explain", "manager", "politely", "check"]] },
+        { by: "dan", t: "short", q: "Are you applying anywhere else?" },
+        { by: "dan", t: "why", q: "What would make you quit a job?" },
+        { by: "dan", t: "story", q: "Tell me about a time you had to deal with stress." },
+        { by: "dan", t: "close", q: "Do you have any questions for me?" } ] ] },
+  { id: "everyday", title: "Everyday Adult Talk", sub: "Walk-ins, customers, coworkers", cast: ["tony", "ellen", "jordan", "dan"], focus: "etiquette", single: true,
+    goal: "Real life isn't only interviews. Practice the short conversations that come up every day at work.",
+    tips: ["Start with a greeting and your name when you meet someone.", "With an upset customer: apologize, fix it, thank them.", "With coworkers, keep it friendly and short. It's okay to say no politely."],
+    sets: [
+      [ { by: "tony", t: "reply", q: "Hey, what can I do for you?", expect: [["application", "apply", "hiring", "job", "position", "manager"]] },
+        { by: "tony", t: "reply", q: "Manager's not here right now. Want to leave your info?", expect: [["name", "number", "phone", "thank", "yes", "sure"]] },
+        { by: "ellen", t: "reply", q: "Excuse me. My steak is way overcooked. I asked for medium rare.", expect: [["sorry", "apolog"], ["fix", "new", "another", "replace", "right away", "get you", "remake", "fire"]] },
+        { by: "jordan", t: "reply", q: "Hey, you're the new guy, right? How's your first week going?" },
+        { by: "jordan", t: "reply", q: "Any chance you could cover my Saturday shift?", expect: [["yes", "sure", "can't", "cannot", "sorry", "let me check", "maybe"]] },
+        { by: "dan", t: "reply", q: "Hi {name}, it's Dan from the restaurant, following up on your interview. Are you still interested in the position?", expect: [["yes", "definitely", "absolutely", "interested"], ["thank"]] } ],
+      [ { by: "tony", t: "reply", q: "We're slammed right now. What do you need?", expect: [["application", "apply", "hiring", "job", "come back", "later"]] },
+        { by: "ellen", t: "reply", q: "Is there anything on the menu without nuts? My grandson is allergic.", expect: [["check", "chef", "ask", "make sure", "find out"]] },
+        { by: "ellen", t: "reply", q: "This is the third time my order's been wrong here.", expect: [["sorry", "apolog"], ["fix", "make it right", "manager", "get you"]] },
+        { by: "jordan", t: "reply", q: "Where'd you learn to cook like that?" },
+        { by: "jordan", t: "reply", q: "Can you show me how you do that dice so fast?" },
+        { by: "tony", t: "reply", q: "You were late today. What happened?", expect: [["sorry", "apolog"], ["won't", "will not", "next time", "make sure", "earlier"]] } ] ] },
+  { id: "panel3", title: "Final Round Panel", sub: "Three interviewers, all you", cast: ["keisha", "marisol", "dan"], focus: "eye",
+    goal: "Everything together: greet everyone, answer whoever asks, tell clear stories, and close strong.",
+    tips: ["Smile at all three at the start.", "Answer the asker, include the others, and finish back on the asker.", "Close with a question and a thank-you to everyone."],
+    sets: [
+      [ { by: "keisha", t: "greet", q: "Hi {name}! I'm Keisha, and you've met Chef Marisol and Dan. How are you feeling today?" },
+        { by: "dan", t: "intro", q: "Tell us about yourself." },
+        { by: "marisol", t: "story", q: "Tell me about the hardest service you've ever worked." },
+        { by: "keisha", t: "why", q: "How do you handle it when you get corrected in front of others?" },
+        { by: "dan", t: "why", q: "Why should we hire you today?" },
+        { by: "marisol", t: "skill", q: "What's the temperature danger zone?", expect: [["41", "40", "forty"], ["135", "140"]] },
+        { by: "keisha", t: "close", q: "What questions do you have for us?" } ],
+      [ { by: "marisol", t: "greet", q: "Welcome back, {name}. Keisha and Dan are joining us. Ready?" },
+        { by: "keisha", t: "intro", q: "Start us off. Who are you?" },
+        { by: "dan", t: "story", q: "Tell me about a time you took responsibility for a problem." },
+        { by: "marisol", t: "why", q: "What does a clean station look like to you?" },
+        { by: "keisha", t: "why", q: "How would you get along with a team that's older than you?" },
+        { by: "dan", t: "short", q: "If we offered you the job, when could you start?" },
+        { by: "marisol", t: "close", q: "Anything you'd like to ask the three of us?" } ] ] },
+  { id: "final", kind: "measure", form: 2, title: "Final Interview", sub: "Graduation measure", cast: ["dan"],
+    goal: "Your final measured interview. Compare it with your baseline to see the full journey.",
+    tips: ["Treat it like the real thing.", "Greeting, eye contact, clear stories, a strong close."] }
+];
+const LESSON = Object.fromEntries(LESSONS.map(l => [l.id, l]));
+const PRESSURE = [
+  { t: "why", q: "Okay, but why should I pick you over someone with more experience?" },
+  { t: "story", q: "Give me a specific example of that." },
+  { t: "why", q: "What would your instructor say is your weak spot?" },
+  { t: "why", q: "If I called your teacher right now, what would they tell me?" }
+];
+const RAPID = [
+  { t: "rapid", q: "Rapid round. In one sentence, why you?" },
+  { t: "rapid", q: "Name a dish you'd put on our menu." },
+  { t: "rapid", q: "First thing you do when you get to your station?" },
+  { t: "rapid", q: "One word your teacher would use for you?" },
+  { t: "rapid", q: "Quick. How do you handle a rude customer?" },
+  { t: "rapid", q: "Favorite knife?" }
+];
+const FOLLOWUPS = ["Could you tell me a little more about that?", "Can you give me an example?", "Say more about that. I'm interested.", "What did you do, specifically, and how did it turn out?", "What did you learn from that?"];
+const CLOSER = "That's everything I have. Thanks so much for your time today, {name}.";
+const CULINARY = ["knife", "prep", "station", "line", "sauce", "saute", "grill", "bake", "pastry", "temperature", "temp", "sanit", "servsafe", "food safety", "certif", "mise", "plate", "plating", "dice", "julienne", "chef", "catering", "service", "ticket", "recipe", "kitchen", "culinary", "fifo", "walk-in", "menu", "cook"];
+const RANGE = { greet: [4, 40], intro: [45, 160], why: [25, 120], story: [50, 200], short: [5, 60], skill: [6, 80], close: [8, 80], reply: [8, 80], rapid: [3, 35] };
+
+/* ============ AVATARS ============ */
+// 3D characters (TalkingHead.js). Settings for each model come from TalkingHead's own demo config.
+const AV = {
+  dan:     { url: "./avatars/avatarsdk.glb", body: "M", avatarMood: "neutral",
+             retarget: { Neck: { z: -0.01, rx: -0.15 }, Neck1: { z: -0.01, rx: -0.15 }, Neck2: { z: -0.01, rx: -0.15 }, LeftShoulder: { rz: -0.3 }, RightShoulder: { rz: 0.3 }, scaleToEyesLevel: 1.0, origin: { y: -0.1 } },
+             baseline: { headRotateX: -0.04, eyeBlinkLeft: 0.05, eyeBlinkRight: 0.05 } },
+  marisol: { url: "./avatars/brunette.glb", body: "F", avatarMood: "happy" },
+  keisha:  { url: "./avatars/avaturn.glb", body: "F", avatarMood: "happy",
+             retarget: { Hips: { y: 0.03 }, Spine: { y: 0.02 }, Spine1: { y: 0.02, z: 0.01 }, Spine2: { y: 0.02, z: 0.01 }, Neck: { z: 0.02, y: 0.01 }, Head: { z: 0.02 }, LeftShoulder: { rx: -0.5 }, RightShoulder: { rx: -0.5 }, scaleToHipsLevel: 1.0 },
+             baseline: { headRotateX: -0.05, eyeBlinkLeft: 0.15, eyeBlinkRight: 0.15 } },
+  ellen:   { url: "./avatars/mpfb.glb", body: "F", avatarMood: "neutral", baseline: {} }
+};
+AV.tony = AV.dan; AV.jordan = AV.dan;
+
+// Same hash the voice renderer uses to name each line's audio file.
+function lineId(ch, text) {
+  let h = 0x811c9dc5; const s = ch + "|" + text;
+  for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 0x01000193) >>> 0; }
+  return ch + "_" + h.toString(16).padStart(8, "0");
+}
+let AUDIO = null, AC = null, TH = null;
+const HEADS = {}, bufCache = new Map();
+fetch("audio/index.json").then(r => r.ok ? r.json() : null).then(j => { AUDIO = j; }).catch(() => {});
+function audioBuffer(id, text) {
+  const key = lineId(id, text);
+  if (!AC || !AUDIO || !AUDIO[key]) return null;
+  if (!bufCache.has(key)) bufCache.set(key, fetch("audio/" + key + ".mp3").then(r => r.arrayBuffer()).then(b => AC.decodeAudioData(b)).catch(() => null));
+  return bufCache.get(key);
+}
+async function initHeads(ids, onStatus) {
+  const generation = mediaGeneration;
+  try { if (!TH) TH = (await import("./modules/talkinghead.mjs")).TalkingHead; } catch (e) { return false; }
+  for (const id of ids) {
+    if (generation !== mediaGeneration) return false;
+    if (HEADS[id] || id === "ellen") continue;
+    const el = document.getElementById("th-" + id); if (!el || !AV[id]) continue;
+    try {
+      const h = new TH(el, { lipsyncModules: ["en"], lipsyncLang: "en", cameraView: "head", modelFPS: 30,
+        modelPixelRatio: Math.min(1, 2 / (window.devicePixelRatio || 1)), audioCtx: AC || undefined,
+        avatarIdleEyeContact: 0.6, avatarSpeakingEyeContact: 0.75, cameraRotateEnable: false, cameraZoomEnable: false, cameraPanEnable: false });
+      await h.showAvatar({ ...AV[id], lipsyncLang: "en" }, ev => { if (ev.lengthComputable && onStatus) onStatus(`Getting ${CH[id].short} ready… ${Math.round(ev.loaded / ev.total * 100)}%`); });
+      if (generation !== mediaGeneration) { h.stop(); h.renderer?.dispose(); return false; }
+      HEADS[id] = h;
+      const fb = document.getElementById("nb-" + id); if (fb) fb.hidden = true;
+    } catch (e) { console.warn("avatar failed", id, e); }
+  }
+  return Object.keys(HEADS).length > 0;
+}
+function disposeHeads() {
+  for (const [id, h] of Object.entries(HEADS)) { try { h.stop(); h.renderer && h.renderer.dispose(); } catch (e) {} delete HEADS[id]; }
+}
+function avatarSVG(id, c) {
+  const s = c.skin, h = c.hair, dark = "#2a1a12";
+  let back = "", front = "";
+  if (c.hs === "long") back = `<path d="M50 90 Q48 30 100 32 Q152 30 150 90 L156 160 Q100 150 44 160Z" fill="${h}"/>`;
+  if (c.hs === "bun" && !c.hat) back = `<circle cx="100" cy="30" r="16" fill="${h}"/>`;
+  if (c.hs === "short") front = `<path d="M54 82 Q50 38 100 36 Q150 38 146 82 Q138 58 100 56 Q62 58 54 82Z" fill="${h}"/>`;
+  if (c.hs === "bun") front = `<path d="M54 86 Q52 40 100 40 Q148 40 146 86 Q132 60 100 60 Q68 60 54 86Z" fill="${h}"/>`;
+  if (c.hs === "long") front = `<path d="M54 84 Q54 40 100 40 Q146 40 146 84 Q126 58 96 62 Q70 66 54 84Z" fill="${h}"/>`;
+  if (c.hs === "curly") front = [[60,64],[74,50],[90,42],[108,41],[124,47],[138,60],[144,76],[56,78]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="14" fill="${h}"/>`).join("");
+  const hat = c.hat ? `<g><rect x="60" y="34" width="80" height="24" rx="5" fill="#fbfbf8" stroke="#d8d8d2"/><circle cx="72" cy="30" r="17" fill="#fbfbf8"/><circle cx="100" cy="20" r="22" fill="#fbfbf8"/><circle cx="128" cy="30" r="17" fill="#fbfbf8"/><rect x="60" y="48" width="80" height="10" fill="#fbfbf8"/></g>` : "";
+  const glasses = c.glasses ? `<g fill="none" stroke="#222" stroke-width="2.4"><rect x="70" y="86" width="25" height="18" rx="7"/><rect x="105" y="86" width="25" height="18" rx="7"/><path d="M95 94 H105"/></g>` : "";
+  const beard = c.beard ? `<path d="M64 112 Q66 150 100 154 Q134 150 136 112 Q124 134 100 134 Q76 134 64 112Z" fill="${h}" opacity=".85"/>` : "";
+  const buttons = c.hat ? `<g fill="#cfcfc8"><circle cx="86" cy="186" r="3"/><circle cx="114" cy="186" r="3"/><circle cx="86" cy="204" r="3"/><circle cx="114" cy="204" r="3"/></g>` : "";
+  const eye = x => `<ellipse cx="${x}" cy="95" rx="9" ry="6.2" fill="#fff"/><circle cx="${x}" cy="95" r="4.4" fill="#3b2a1d"/><circle cx="${x + 1.4}" cy="93.6" r="1.4" fill="#fff"/><ellipse class="lid" cx="${x}" cy="95" rx="10" ry="7" fill="${s}"/>`;
+  return `<svg viewBox="0 0 200 220" role="img" aria-label="${esc(c.name)}"><defs><clipPath id="clip-${id}"><rect width="200" height="220" rx="0"/></clipPath></defs>
+  <rect width="200" height="220" fill="rgba(255,255,255,.0)"/>
+  <g clip-path="url(#clip-${id})"><g id="body-${id}">
+  ${back}
+  <path d="M26 222 Q32 166 100 158 Q168 166 174 222Z" fill="${c.shirt}"/>${buttons}
+  <rect x="87" y="134" width="26" height="30" fill="${s}"/>
+  <ellipse cx="54" cy="100" rx="7" ry="11" fill="${s}"/><ellipse cx="146" cy="100" rx="7" ry="11" fill="${s}"/>
+  <ellipse cx="100" cy="96" rx="46" ry="54" fill="${s}"/>
+  ${beard}${front}${hat}
+  <g id="eyes-${id}">${eye(82)}${eye(118)}</g>
+  <path d="M72 82 Q82 77 92 81" stroke="${dark}" stroke-width="3" fill="none" stroke-linecap="round"/><path d="M108 81 Q118 77 128 82" stroke="${dark}" stroke-width="3" fill="none" stroke-linecap="round"/>
+  ${glasses}
+  <path d="M100 100 Q96 112 101 114" stroke="rgba(0,0,0,.25)" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+  <ellipse id="mouth-${id}" cx="100" cy="126" rx="11" ry="2.2" fill="#5e2828"/>
+  <path d="M88 124 Q100 131 112 124" stroke="#7a3434" stroke-width="2" fill="none" stroke-linecap="round" opacity=".7"/>
+  </g></g></svg>`;
+}
+let blinkTimer = null;
+function startBlinking() {
+  clearInterval(blinkTimer);
+  blinkTimer = setInterval(() => {
+    document.querySelectorAll(".face").forEach(f => { if (Math.random() < 0.3) { f.classList.add("blink"); setTimeout(() => f.classList.remove("blink"), 140); } });
+  }, 1100);
+}
+let mouthTimer = null;
+function mouth(id, on) {
+  clearInterval(mouthTimer);
+  const m = document.getElementById("mouth-" + id);
+  document.querySelectorAll("[id^=mouth-]").forEach(x => x.setAttribute("ry", "2.2"));
+  if (!on || !m) return;
+  mouthTimer = setInterval(() => m.setAttribute("ry", (2 + Math.random() * 8).toFixed(1)), 95);
+}
+
+/* ============ VOICE OUT (TTS) ============ */
+const playingSources = new Set();
+let voices = [];
+function loadVoices() { try { voices = speechSynthesis.getVoices().filter(v => /^en(-|_)/i.test(v.lang)); } catch (e) {} }
+if ("speechSynthesis" in window) { loadVoices(); speechSynthesis.onvoiceschanged = loadVoices; }
+const FEM = ["Samantha", "Karen", "Moira", "Tessa", "Ava", "Allison", "Susan", "Zoe", "Nicky", "Victoria", "Serena", "Fiona"];
+const MAL = ["Daniel", "Alex", "Aaron", "Tom", "Evan", "Nathan", "Oliver", "Arthur", "Rishi", "Fred", "Gordon", "Reed"];
+const voiceCache = {};
+function voiceFor(id) {
+  if (voiceCache[id] !== undefined) return voiceCache[id];
+  const c = CH[id], names = c.g === "f" ? FEM : MAL;
+  const used = Object.values(voiceCache);
+  const rank = v => (/(Premium|Enhanced)/.test(v.name) ? 2 : 0) + (/en-US/.test(v.lang) ? 1 : 0);
+  const cands = voices.filter(v => names.some(n => v.name.includes(n))).sort((a, b) => rank(b) - rank(a));
+  const v = cands.find(v => !used.includes(v)) || cands[0] || null;
+  voiceCache[id] = v; return v;
+}
+// Recorded human voice when available: lip-synced on the 3D character, or played alone (prep screen).
+// Falls back to the device voice only if a line has no recording.
+async function speak(text, id) {
+  const generation = mediaGeneration;
+  const p = audioBuffer(id, text), buf = p && await p;
+  if (generation !== mediaGeneration) return;
+  if (buf) {
+    const meta = AUDIO[lineId(id, text)], h = HEADS[id];
+    return new Promise(res => {
+      let done = false; const fin = () => { if (!done) { done = true; res(); } };
+      setTimeout(fin, buf.duration * 1000 + 3000);
+      if (h) {
+        try { h.speakAudio({ audio: buf, words: meta.words, wtimes: meta.wtimes, wdurations: meta.wdurations }, { lipsyncLang: "en" }); h.speakMarker(fin); return; } catch (e) {}
+      }
+      const src = AC.createBufferSource(); src.buffer = buf; src.connect(AC.destination); playingSources.add(src); src.onended = () => { playingSources.delete(src); fin(); }; src.start();
+    });
+  }
+  return speakTTS(text, id);
+}
+function speakTTS(text, id) {
+  return new Promise(res => {
+    let done = false; const fin = () => { if (done) return; done = true; mouth(id, false); res(); };
+    mouth(id, true);
+    if (!("speechSynthesis" in window)) { setTimeout(fin, 600 + text.length * 55); return; }
+    try {
+      speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(text), c = CH[id];
+      const v = voiceFor(id); if (v) u.voice = v;
+      u.pitch = c.pitch; u.rate = c.rate * (S.settings.mode === "boot" ? 1.04 : 1);
+      u.onend = fin; u.onerror = fin;
+      speechSynthesis.speak(u);
+    } catch (e) { setTimeout(fin, 600 + text.length * 55); return; }
+    setTimeout(fin, 2500 + text.length * 95); // iOS sometimes never fires onend
+  });
+}
+
+/* ============ VOICE IN (push-to-talk) ============ */
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+class Listener {
+  constructor(onText) { this.onText = onText; this.finals = ""; this.interim = ""; this.active = false; this.firstAt = null; this.error = null; }
+  start() {
+    if (!SR) { this.error = "unsupported"; return false; }
+    activeListener = this; this.active = true; this._spawn(); return this.active;
+  }
+  _spawn() {
+    const r = new SR(); this.r = r;
+    r.lang = "en-US"; r.continuous = true; r.interimResults = true;
+    r.onresult = e => {
+      let interim = "";
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        const t = e.results[i][0].transcript;
+        if (e.results[i].isFinal) this.finals += (this.finals ? " " : "") + t.trim(); else interim += t;
+      }
+      this.interim = interim;
+      if (!this.firstAt && (this.finals || interim).trim()) this.firstAt = Date.now();
+      this.onText(this.text());
+    };
+    r.onerror = e => { this.error = e.error; this.cancel(); this.onText(this.text(), true); };
+    r.onend = () => { if (this.interim) { this.finals += (this.finals ? " " : "") + this.interim.trim(); this.interim = ""; } if (this.active) { try { this._spawn(); } catch (e) {} } };
+    try { r.start(); } catch (e) { this.error = "start"; this.cancel(); }
+  }
+  cancel() { this.active = false; if (this.r) { this.r.onend = null; this.r.onresult = null; this.r.onerror = null; try { this.r.abort(); } catch (e) {} } if (activeListener === this) activeListener = null; }
+  text() { return (this.finals + " " + this.interim).trim(); }
+  async stop() { this.active = false; try { this.r && this.r.stop(); } catch (e) {} await sleep(700); if (this.interim) { this.finals += " " + this.interim; this.interim = ""; } return this.text(); }
+}
+
+/* ============ EYES (on-device face tracking) ============ */
+const V = { ready: false, loading: false, lm: null, stream: null, last: null, timer: null, calib: null, phase: null, acc: null, onFrame: null, error: null };
+const MP = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14";
+async function startCamera() {
+  if (V.stream) return true;
+  const generation = mediaGeneration;
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user", width: { ideal: 640 }, height: { ideal: 480 } }, audio: false });
+    if (generation !== mediaGeneration) { stream.getTracks().forEach(t => t.stop()); return false; }
+    V.stream = stream;
+    const v = $("#cam"); v.srcObject = V.stream; await v.play().catch(() => {});
+    return true;
+  } catch (e) { V.error = "camera"; return false; }
+}
+function cameraFromTap() {
+  return new Promise(resolve => {
+    let settled = false;
+    const finish = ok => { if (settled) return; settled = true; cancelSetup = null; resolve(ok); };
+    cancelSetup = () => finish(false);
+    $("#ctl").innerHTML = '<p>Eye coaching is optional and never affects your practice result.</p><button class="btn" id="start-camera">Tap to enable camera</button><button class="btn ghost" id="skip-camera">Continue without camera</button>';
+    $("#start-camera").onclick = () => {
+      $("#start-camera").disabled = true;
+      // Invoke the permission request directly from this fresh user tap.
+      startCamera().then(finish, () => finish(false));
+    };
+    $("#skip-camera").onclick = () => { mediaGeneration++; stopCamera(); finish(false); };
+  });
+}
+function stopCamera() {
+  clearTimeout(V.timer); V.timer = null;
+  if (V.stream) V.stream.getTracks().forEach(t => t.stop());
+  V.stream = null; $("#cam").srcObject = null; $("#cam").className = "hide";
+}
+async function loadVision() {
+  if (V.ready || V.loading) { while (V.loading) await sleep(100); return V.ready; }
+  V.loading = true;
+  try {
+    const vision = await import(MP + "/vision_bundle.mjs");
+    const files = await vision.FilesetResolver.forVisionTasks(MP + "/wasm");
+    const opts = d => ({ baseOptions: { modelAssetPath: "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task", delegate: d },
+      runningMode: "VIDEO", numFaces: 1, outputFaceBlendshapes: true, outputFacialTransformationMatrixes: true });
+    try { V.lm = await vision.FaceLandmarker.createFromOptions(files, opts("GPU")); }
+    catch (e) { V.lm = await vision.FaceLandmarker.createFromOptions(files, opts("CPU")); }
+    V.ready = true;
+  } catch (e) { V.error = "model"; V.ready = false; }
+  V.loading = false; return V.ready;
+}
+// Gaze estimate = head direction + eye direction. Signs and scale don't need to be exact:
+// each lesson starts with a calibration that records where "looking at this person" lands.
+function features(res) {
+  if (!res || !res.faceBlendshapes || !res.faceBlendshapes.length) return null;
+  const b = {}; res.faceBlendshapes[0].categories.forEach(c => b[c.categoryName] = c.score);
+  const h = ((b.eyeLookOutLeft || 0) - (b.eyeLookInLeft || 0) + (b.eyeLookInRight || 0) - (b.eyeLookOutRight || 0)) / 2;
+  const v = ((b.eyeLookUpLeft || 0) + (b.eyeLookUpRight || 0) - (b.eyeLookDownLeft || 0) - (b.eyeLookDownRight || 0)) / 2;
+  let yaw = 0, pitch = 0;
+  const m = res.facialTransformationMatrixes && res.facialTransformationMatrixes[0] && res.facialTransformationMatrixes[0].data;
+  if (m) { yaw = Math.atan2(m[8], m[10]) * 57.3; pitch = Math.atan2(-m[9], Math.hypot(m[8], m[10])) * 57.3; }
+  return { x: yaw + h * 32, y: pitch + v * 32 };
+}
+function loop() {
+  const vid = $("#cam");
+  if (V.lm && vid.readyState >= 2) {
+    try { V.last = features(V.lm.detectForVideo(vid, performance.now())); } catch (e) { V.last = null; }
+    const where = classify(V.last);
+    if (V.acc && V.phase) { const a = V.acc[V.phase]; a.n++; if (V.last) a.face++; if (where && where === V.acc.target) a.hit++; }
+    if (V.onFrame) V.onFrame(where, V.last);
+  }
+  V.timer = setTimeout(loop, 100);
+}
+function classify(f) {
+  if (!f || !V.calib) return null;
+  const ts = Object.entries(V.calib.targets);
+  let best = null, bd = 1e9;
+  for (const [k, c] of ts) { const d = Math.hypot((f.x - c.x) / V.calib.tolX, (f.y - c.y) / V.calib.tolY); if (d < bd) { bd = d; best = k; } }
+  return bd <= 1 ? best : "away";
+}
+async function collect(ms) {
+  const pts = []; const end = Date.now() + ms;
+  while (Date.now() < end) { if (V.last) pts.push({ ...V.last }); await sleep(90); }
+  return pts;
+}
+const mean = a => a.reduce((s, x) => s + x, 0) / (a.length || 1);
+const sd = a => { const m = mean(a); return Math.sqrt(mean(a.map(x => (x - m) ** 2))); };
+
+/* ============ SCORING ============ */
+const FILLER_RE = /\b(um+|uh+|erm|uhm|you know|kinda|kind of|sort of|i mean|basically|literally|i guess)\b/g;
+const QWORDS = /\b(what|how|when|who|where|is there|are there|do you|does|can i|could you|would|will)\b/;
+function analyzeAnswer(item, text, timing, eye) {
+  const clean = (text || "").trim();
+  const words = clean ? clean.split(/\s+/).length : 0;
+  const low = " " + clean.toLowerCase().replace(/[^a-z0-9'\- ]/g, " ") + " ";
+  const fillers = (low.match(FILLER_RE) || []).length + Math.max(0, (low.match(/\blike\b/g) || []).length - 1);
+  const dur = Math.max(0.1, ((timing.end - (timing.first || timing.start)) / 1000));
+  const wpm = dur > 4 ? words / (dur / 60) : null;
+  const latency = timing.first ? (timing.first - timing.start) / 1000 : null;
+  const [lo, hi] = RANGE[item.t] || [10, 100];
+  const len = words < lo ? words / lo : words > hi ? Math.max(0.55, 1 - (words - hi) / hi) : 1;
+  const s1 = /\b(when|one time|once|at my|during|in class|last year|in school|there was|we had|my (first|second|third|fourth|senior|junior))\b/.test(low);
+  const s2 = /\bi (made|decided|helped|started|talked|cleaned|fixed|prepped|asked|took|organized|worked|cooked|stayed|kept|focused|tried|practiced|told|showed|learned|figured|grabbed|set|made sure)\b/.test(low) || /\bi'(d|ve) /.test(low);
+  const s3 = /\b(so |which|ended up|result|learned|turned out|after that|because of that|finished|on time|in the end|now i|from then|proud|worked out)\b/.test(low);
+  const star = (s1 ? 1 : 0) + (s2 ? 1 : 0) + (s3 ? 1 : 0);
+  const spec = Math.min(1, (/\d|\b(one|two|three|four|five|six|ten|twenty|hundred)\b/.test(low) ? 0.5 : 0) + (CULINARY.some(k => low.includes(k)) ? 0.5 : 0));
+  let expectFrac = null;
+  if (item.expect) expectFrac = item.expect.filter(g => g.some(k => low.includes(k))).length / item.expect.length;
+  let substance;
+  if (item.t === "story") substance = 0.45 * len + 0.4 * star / 3 + 0.15 * spec;
+  else if (item.t === "intro") substance = 0.6 * len + 0.2 * (/(school|culinary|program|train|certif|class)/.test(low) ? 1 : 0) + 0.2 * (/(looking|hope|want|goal|excited|learn|grow|ready)/.test(low) ? 1 : 0);
+  else if (expectFrac !== null) substance = 0.65 * expectFrac + 0.35 * len;
+  else substance = 0.7 * len + 0.3 * spec;
+  if (words === 0) substance = 0;
+  // Fillers: logged, lightly weighted (iPhone dictation drops "um/uh", so counts undercount).
+  const fillerRate = words ? fillers / words * 100 : 0;
+  const fillerScore = clamp(1 - fillerRate / 8);
+  const pace = wpm == null ? 0.8 : wpm < 70 ? 0.4 : wpm < 105 ? 0.4 + 0.6 * (wpm - 70) / 35 : wpm <= 175 ? 1 : wpm < 230 ? 1 - 0.6 * (wpm - 175) / 55 : 0.4;
+  const delivery = words ? 0.75 * pace + 0.25 * fillerScore : 0.3;
+  const respond = latency == null ? (words ? 0.6 : 0.2) : latency <= 2.5 ? 1 : latency <= 7 ? 1 - 0.5 * (latency - 2.5) / 4.5 : 0.4;
+  let etiquette = null;
+  if (item.t === "greet") etiquette = (/(good|great|well|fine|thank|nice|pleasure|doing)/.test(low) ? 0.6 : 0) + (/(you|yourself|how are|how about)/.test(low) ? 0.4 : 0);
+  if (item.t === "close") etiquette = (QWORDS.test(low) ? 0.7 : 0) + (/thank/.test(low) ? 0.3 : 0);
+  if (item.t === "intro") etiquette = /(my name|i'm |i am )/.test(low) ? 1 : 0.5;
+  // Eye contact: natural face-directed gaze is 50-85% of the time; 100% isn't the goal.
+  let eyeScore = null;
+  if (eye && eye.n > 5) { const p = eye.hit / eye.n; eyeScore = p >= 0.5 ? (p <= 0.9 ? 1 : 0.95) : 0.2 + 1.6 * p; }
+  const tags = [];
+  if (words < lo) tags.push("Room to add an example");
+  if (item.t === "story" && star === 3) tags.push("Full STAR story");
+  if (expectFrac === 1) tags.push("Spot on");
+  if (eyeScore != null && eyeScore >= 0.95) tags.push("Strong eye contact");
+  if (latency != null && latency <= 2.5) tags.push("Quick start");
+  if (spec >= 1) tags.push("Specific details");
+  return { words, fillers, fillerRate: +fillerRate.toFixed(1), dur: +dur.toFixed(1), wpm: wpm && Math.round(wpm), latency: latency && +latency.toFixed(1),
+    star, spec, expectFrac, eyePct: eye && eye.n > 5 ? +(eye.hit / eye.n).toFixed(2) : null, eyeListenPct: null,
+    comps: { substance: +substance.toFixed(3), delivery: +delivery.toFixed(3), respond: +respond.toFixed(3), etiquette: etiquette == null ? null : +clamp(etiquette).toFixed(3), eye: eyeScore == null ? null : +eyeScore.toFixed(3) }, tags };
+}
+// Gaze is optional coaching only and never contributes to the practice pass threshold.
+const WEIGHTS = { delivery: 0.2, substance: 0.35, respond: 0.1, etiquette: 0.1 };
+function lessonScore(items) {
+  const comps = {};
+  for (const k of Object.keys(WEIGHTS)) { const v = items.map(i => i.m.comps[k]).filter(x => x != null); comps[k] = v.length ? mean(v) : null; }
+  let tw = 0, ts = 0; for (const k in WEIGHTS) if (comps[k] != null) { tw += WEIGHTS[k]; ts += WEIGHTS[k] * comps[k]; }
+  return { score: Math.round(100 * ts / (tw || 1)), comps };
+}
+const COACH = {
+  eye: { name: "Eye contact", win: "The camera estimated face-directed gaze. Use this optional cue only if it helps; it does not judge confidence or trustworthiness.", next: "Start and finish each answer looking at their eyes. Glancing away to think is normal; come back to their eyes to land the point." },
+  delivery: { name: "Delivery", win: "Your pace was easy to follow, not rushed and not dragging.", next: "Aim for a relaxed, even pace. A short pause between sentences sounds more confident than filling the space." },
+  substance: { name: "Answers", win: "Your answers had real detail and examples.", next: "Add one more sentence with a real example. For stories, use STAR: where you were, what you did, how it turned out." },
+  respond: { name: "Getting started", win: "You started your answers smoothly.", next: "It's fine to take a breath. Try a starter like “Good question,” then begin with your first point." },
+  etiquette: { name: "Manners", win: "Greeting, thanks and questions all landed. Interviewers notice that.", next: "Open with “Nice to meet you,” ask a question when they invite one, and close with “Thank you for your time.”" }
+};
+// Coaching plan: plain-language focus areas Connor works on, why they matter, and where to practice them.
+const FOCUS = {
+  eye: { title: "Connect with your eyes", why: "Interviewers read steady eye contact as confidence and honesty. It's often the first thing they notice, before your answers.", how: "Look at their eyes when you start and finish each answer. Glancing away to think in the middle is normal.", lesson: "first30" },
+  delivery: { title: "Speak at an easy pace", why: "A calm, even pace makes you sound sure of yourself, and it gives the interviewer time to take in what you said.", how: "Slow down a little and let short pauses happen between sentences. A pause sounds more confident than “um”.", lesson: "first30" },
+  substance: { title: "Give fuller answers with real examples", why: "Interviewers decide based on examples. A one-line answer leaves them guessing; a short story proves you can do the job.", how: "Add one real example to every answer: “For example, in culinary class I…” Use your four years of training. It counts.", lesson: "star" },
+  respond: { title: "Start your answers smoothly", why: "A long silence before answering can read as nerves. A quick, calm start shows you're comfortable.", how: "Use a starter line while you think: “Good question.” or “Sure, so…” Then say your first point.", lesson: "curve" },
+  etiquette: { title: "Open and close like a pro", why: "Greetings, a question for them and a thank-you are small things that make you memorable, and many candidates skip them.", how: "Say “Nice to meet you”, ask one question when invited, and close with “Thank you for your time.”", lesson: "first30" }
+};
+function compAvg(recs) {
+  const out = {};
+  for (const k of Object.keys(WEIGHTS)) { const v = recs.map(r => r.comps[k]).filter(x => x != null); if (v.length) out[k] = mean(v); }
+  return out;
+}
+// Strength = his best skill at baseline; focus areas = his two weakest, tracked from baseline to his last 3 rounds.
+function coachPlan() {
+  const recs = lessonRecs(), base = recs.find(r => r.lessonId === "baseline");
+  if (!base) return null;
+  const start = compAvg([base]), now = compAvg(recs.slice(-3));
+  const ranked = Object.keys(start).sort((a, b) => start[a] - start[b]);
+  const pct = x => x == null ? null : Math.round(x * 100);
+  return { strength: ranked[ranked.length - 1], focus: ranked.slice(0, 2).map(k => ({ k, start: pct(start[k]), now: pct(now[k]) })) };
+}
+function focusCard(f, showWhy) {
+  const F = FOCUS[f.k], up = f.now != null && f.now > f.start;
+  return `<div class="card stack" style="gap:8px"><div class="spread"><h3>${esc(F.title)}</h3>${up ? `<span class="pill good">+${f.now - f.start}</span>` : `<span class="pill warm">focus</span>`}</div>
+    ${showWhy ? `<p class="small"><b>Why it matters:</b> ${esc(F.why)}</p>` : ""}
+    <p class="small"><b>Your next move:</b> ${esc(F.how)}</p>
+    <div><div class="spread small muted"><span>Start ${f.start}</span><span>Now ${f.now ?? f.start}</span></div><div class="bar ${up ? "" : "s"}"><i style="width:${f.now ?? f.start}%"></i></div></div>
+    ${unlocked(LESSONS.findIndex(l => l.id === F.lesson)) ? `<button class="chip" data-a="prep" data-id="${F.lesson}">Practice this: ${esc(LESSON[F.lesson].title)}</button>` : ""}</div>`;
+}
+function viewPlan() {
+  const p = coachPlan(); if (!p) return viewHome();
+  render(`<div class="stack" style="padding-top:8px">
+    <div class="spread"><button class="chip" data-a="home">&larr; Home</button><span class="label">Your coaching plan</span></div>
+    <h1>Here's your game plan, ${esc(first())}.</h1>
+    <p class="muted">Every strong interviewer started somewhere. These are the two things that will move your score the most right now. Everything else is already working for you.</p>
+    <div class="ticket stack"><span class="label">Your strength</span><h3>${esc(COACH[p.strength].name)}</h3><p class="small">${esc(COACH[p.strength].win)} Keep doing exactly that.</p></div>
+    <span class="label">Your two focus areas</span>
+    ${p.focus.map(f => focusCard(f, true)).join("")}
+    <p class="small muted">Your plan updates as you practice. Watch these bars climb.</p>
+    <button class="btn wide" data-a="home">Let's go</button></div>`);
+}
+H.plan = () => viewPlan();
+
+/* ============ PROGRESS RULES ============ */
+function prog(id) { return S.progress[id] || (S.progress[id] = { attempts: 0, best: null, passed: false, completed: false, completedAt: null, lastAt: null, passAt: null, reviews: 0 }); }
+function isDone(l) {
+  const p = prog(l.id);
+  // Preserve prior earned progress without rewriting historical scores or records.
+  if (p.completed === true || p.passed === true) return true;
+  return p.completed === undefined && l.kind === "measure" && p.attempts > 0;
+}
+function practiceComplete(items) { return items.length > 0 && items.every(i => i.m.words > 0); }
+function unlocked(i) { return i === 0 || isDone(LESSONS[i - 1]); }
+function nextIndex() { const i = LESSONS.findIndex(l => !isDone(l)); return i < 0 ? null : i; }
+const REVIEW_DAYS = [1, 3, 7, 21];
+function reviewsDue() {
+  const now = Date.now();
+  return LESSONS.filter(l => l.kind !== "measure" && isDone(l) && prog(l.id).reviews < REVIEW_DAYS.length && now - (prog(l.id).completedAt || prog(l.id).passAt) >= REVIEW_DAYS[prog(l.id).reviews] * DAY);
+}
+const lessonRecs = () => S.records.filter(r => r.kind === "lesson").map(r => r.body);
+const doneToday = () => lessonRecs().filter(b => b.date === today()).length;
+
+/* ============ CASE STUDY: intake, check-ins, recordings, delivery, job log ============ */
+S.intake = S.intake || null;
+S.consent = S.consent || { record: false, share: false };
+S.jobs = S.jobs || [];
+S.outbox = S.outbox || [];
+
+// V4: automatic application-data delivery is disabled. Historical outbox is retained.
+async function deliver() { return false; }
+async function flushOutbox() { return false; }
+async function deliverAudio() { return false; }
+
+// Opt-in answer recording, measured interviews only (the before/after evidence). Audio stays in memory for local playback; automatic upload is disabled.
+const REC = { stream: null, mr: null, chunks: [] };
+async function recStart() {
+  const generation = mediaGeneration;
+  try {
+    if (!REC.stream) {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      if (generation !== mediaGeneration) { stream.getTracks().forEach(t => t.stop()); return false; }
+      REC.stream = stream;
+    }
+    const type = MediaRecorder.isTypeSupported("audio/mp4") ? "audio/mp4" : "audio/webm";
+    const chunks = []; REC.chunks = chunks; REC.mr = new MediaRecorder(REC.stream, { mimeType: type, audioBitsPerSecond: 48000 });
+    REC.mr.ondataavailable = e => { if (e.data.size) chunks.push(e.data); };
+    REC.mr.start(); return true;
+  } catch (e) { recRelease(); return false; }
+}
+function recStop() {
+  return new Promise(res => {
+    const mr = REC.mr, chunks = REC.chunks; REC.mr = null;
+    if (!mr || mr.state === "inactive") return res(null);
+    mr.onstop = () => res(new Blob(chunks, { type: mr.mimeType }));
+    try { mr.stop(); } catch (e) { res(null); }
+  });
+}
+function recRelease() { const mr = REC.mr; REC.mr = null; if (mr && mr.state !== "inactive") { try { mr.stop(); } catch (e) {} } if (REC.stream) REC.stream.getTracks().forEach(t => t.stop()); REC.stream = null; }
+
+function slider(id, label, lo, hi, val) {
+  return `<label class="stack" style="gap:6px" for="${id}"><span class="spread"><b>${label}</b><span class="pill warm" id="${id}-v">${val}</span></span>
+    <input type="range" id="${id}" min="1" max="10" value="${val}" style="width:100%">
+    <span class="spread small muted"><span>${lo}</span><span>${hi}</span></span></label>`;
+}
+function bindSliders() { document.querySelectorAll("input[type=range]").forEach(r => r.addEventListener("input", () => { const v = document.getElementById(r.id + "-v"); if (v) v.textContent = r.value; })); }
+
+function viewIntake(fromWelcome) {
+  const i = S.intake || {};
+  const f = (id, label, ph, val) => `<label class="stack" style="gap:6px" for="${id}"><b>${label}</b><textarea id="${id}" style="min-height:64px" placeholder="${esc(ph)}">${esc(val || "")}</textarea></label>`;
+  render(`<div class="stack" style="padding-top:8px">
+    <span class="label">About you &middot; 3 minutes</span>
+    <h2>Let's build your interview stories</h2>
+    <p class="muted small">Interviewers want real examples. Jot down a few words for each, and the app will remind you to use them in your answers.</p>
+    <div class="card stack">
+      ${f("in-dishes", "Dishes or skills you're proud of", "e.g. braised short rib, knife cuts, pastry", i.dishes)}
+      ${f("in-projects", "School projects, events or competitions", "e.g. catered a 120-person event, team cook-off", i.projects)}
+      ${f("in-certs", "Certifications and training", "e.g. ServSafe Food Handler, food safety management, 4 years culinary arts", i.certs || "4 years of culinary arts, food safety certification, food service management certification")}
+      ${f("in-targets", "Places or jobs you want", "e.g. prep cook at a local bistro, line cook at a hotel", i.targets)}
+      ${f("in-avail", "Your availability", "e.g. any day, mornings preferred", i.avail)}
+      ${f("in-goal", "What would landing a job mean to you?", "In your own words", i.goal)}
+    </div>
+    <div class="card stack">
+      <span class="label">Quick check-in</span>
+      ${slider("in-conf", "How confident do you feel about job interviews?", "Not at all", "Very", i.confidence || 5)}
+      ${slider("in-nerves", "How nervous do interviews make you?", "Calm", "Very nervous", i.nerves || 5)}
+    </div>
+    <div class="card stack small">
+      <p>Automatic sharing is disabled. Use Share results only when you choose.</p>
+      <label class="row"><input type="checkbox" id="in-rec" ${S.consent.record ? "checked" : ""}> Record my answers (audio only) during the three measured interviews, so hiring managers can rate my before and after. Recorded only with this box checked.</label>
+      <p class="muted">You can change recording any time in Settings. Audio is held in memory for playback, not automatically uploaded.</p>
+    </div>
+    <button class="btn wide" data-a="intakeSave" data-w="${fromWelcome ? 1 : 0}">Save</button></div>`);
+  bindSliders();
+}
+H.intake = () => viewIntake(false);
+H.intakeSave = async d => {
+  const v = id => ($("#" + id).value || "").trim().slice(0, 400);
+  S.intake = { dishes: v("in-dishes"), projects: v("in-projects"), certs: v("in-certs"), targets: v("in-targets"), avail: v("in-avail"), goal: v("in-goal"),
+    confidence: +$("#in-conf").value, nerves: +$("#in-nerves").value, at: new Date().toISOString() };
+  S.consent = { share: false, record: $("#in-rec").checked };
+  await appendRecord("intake", { app: VERSION, ...S.intake, consent: S.consent });
+  save(); deliver("intake", `Intake: confidence ${S.intake.confidence}/10, nerves ${S.intake.nerves}/10`, { intake: S.intake, consent: S.consent });
+  d.w === "1" ? viewWelcome(2) : viewHome();
+};
+function storyHints(l) {
+  const i = S.intake; if (!i || !["first30", "star", "training", "panel2", "panel3", "curve"].includes(l.id) && l.kind !== "measure") return "";
+  const items = [["Proud of", i.dishes], ["Experience", i.projects], ["Training", i.certs], ["Goal", i.goal]].filter(x => x[1]);
+  if (!items.length) return "";
+  return `<div class="card stack"><span class="label">Your stories to use</span>${items.map(([k, t]) => `<p class="small"><b>${k}:</b> ${esc(t)}</p>`).join("")}<p class="small muted">Pick one and tell it as a short story: where you were, what you did, how it turned out.</p></div>`;
+}
+
+const STAGES = ["Applied", "Interview scheduled", "Interviewed", "Callback", "Offer", "Hired", "Not this time"];
+function viewJobs() {
+  const list = [...S.jobs].reverse();
+  render(`<div class="stack" style="padding-top:8px">
+    <div class="spread"><button class="chip" data-a="home">&larr; Home</button><span class="label">Job hunt</span></div>
+    <h1>Your job hunt</h1>
+    <p class="muted small">Log every application and interview. Each one is practice, and every step counts.</p>
+    <div class="card stack">
+      <label class="label" for="jb-place">Where</label><input id="jb-place" type="text" placeholder="Restaurant or company">
+      <label class="label" for="jb-role">Job</label><input id="jb-role" type="text" placeholder="e.g. prep cook">
+      <label class="label" for="jb-stage">Where it stands</label><select id="jb-stage">${STAGES.map(s => `<option>${s}</option>`).join("")}</select>
+      <label class="label" for="jb-note">Notes (optional)</label><input id="jb-note" type="text" placeholder="e.g. interviewer was the chef, went well">
+      <button class="btn wide" data-a="jobSave">Add to my log</button>
+    </div>
+    ${list.length ? `<div class="stack">${list.map(j => `<div class="card spread"><div style="min-width:0"><b>${esc(j.place)}</b><br><span class="small muted">${esc(j.role || "")} &middot; ${esc(j.date)}${j.note ? " &middot; " + esc(j.note) : ""}</span></div><span class="pill ${/Offer|Hired/.test(j.stage) ? "good" : "warm"}">${esc(j.stage)}</span></div>`).join("")}</div>` : `<p class="small muted">No entries yet. Your first application goes here.</p>`}
+  </div>`);
+}
+H.jobs = () => viewJobs();
+H.jobSave = async () => {
+  const place = ($("#jb-place").value || "").trim().slice(0, 80); if (!place) { toast("Add where you applied"); return; }
+  const j = { place, role: ($("#jb-role").value || "").trim().slice(0, 60), stage: $("#jb-stage").value, note: ($("#jb-note").value || "").trim().slice(0, 140), date: today() };
+  S.jobs.push(j); await appendRecord("job", { app: VERSION, ...j }); save();
+  deliver("job", `Job: ${j.place} – ${j.stage}`, { job: j });
+  toast(/Offer|Hired/.test(j.stage) ? "Huge. Congratulations!" : "Logged. Keep going!"); viewJobs();
+};
+
+/* ============ UI ============ */
+
+function stopSession() {
+  mediaGeneration++; if (RUN) RUN.quit = true;
+  if (cancelSetup) { const cancel = cancelSetup; cancelSetup = null; cancel(); }
+  if (activeListener) activeListener.cancel();
+  if (cancelAnswer) { const cancel = cancelAnswer; cancelAnswer = null; cancel(); }
+  recRelease(); stopCamera(); for (const src of playingSources) { try { src.stop(); } catch (e) {} } playingSources.clear(); V.phase = null; V.acc = null; V.onFrame = null;
+  try { speechSynthesis.cancel(); } catch (e) {} disposeHeads();
+}
+function render(html, preserveSession = false) {
+  if (!preserveSession) stopSession();
+  $("#app").innerHTML = html + `<aside class="card small" aria-label="Crisis support"><b>Need support now?</b> In the U.S., you can choose to <a href="tel:988">Call 988</a> or <a href="sms:988">Text 988</a>. These links open your phone or messaging app; PAYDIRT does not contact anyone automatically.</aside>`;
+  window.scrollTo(0, 0);
+}
+window.addEventListener("pagehide", stopSession);
+window.addEventListener("popstate", stopSession);
+document.addEventListener("visibilitychange", () => { if (document.hidden) stopSession(); });
+document.addEventListener("click", e => {
+  const el = e.target.closest("[data-a]"); if (!el || el.disabled) return;
+  const f = H[el.dataset.a]; if (f) f(el.dataset, el, e);
+});
+function toast(t) { if (saveFailed) return; const d = document.createElement("div"); d.className = "toast"; d.textContent = t; document.body.appendChild(d); setTimeout(() => d.remove(), 2200); }
+function modal(html) { const d = document.createElement("div"); d.className = "overlay"; d.innerHTML = `<div class="card stack">${html}</div>`; document.body.appendChild(d); return d; }
+
+/* --- Welcome / setup --- */
+function viewWelcome(step = 0) {
+  if (step === 0) return render(`
+  <div class="stack" style="padding-top:18px">
+    <span class="brand">OPERATION PAYDIRT &middot; BETA</span>
+    <h1>Practice real conversations until they feel easy.</h1>
+    <p class="muted">Short, private practice interviews with AI characters who talk to you out loud. You answer with your voice. The app coaches you, measures your progress, and unlocks harder rounds as you get better.</p>
+    <div class="card stack">
+      <label class="label" for="nm">Your first name</label>
+      <input id="nm" type="text" autocomplete="given-name" value="${esc(S.profile.name)}" placeholder="Connor">
+      <label class="label" for="job">Job you're going for</label>
+      <select id="job">${["Prep / line cook", "Kitchen lead / supervisor", "Server / host", "Dishwasher / any kitchen job", "Any first job"].map(j => `<option ${j === S.profile.job ? "selected" : ""}>${j}</option>`).join("")}</select>
+    </div>
+    <button class="btn wide" data-a="w1">Next</button>
+  </div>`);
+  if (step === 1) return render(`
+  <div class="stack" style="padding-top:18px">
+    <span class="label">How hard should we push?</span>
+    <h2>Pick your training speed</h2>
+    <p class="muted small">You can change this any time. Every mode stays encouraging; harder modes just move faster and ask more.</p>
+    <div class="stack">${Object.entries(MODES).map(([k, m]) => `<button class="opt ${S.settings.mode === k ? "on" : ""}" data-a="mode" data-k="${k}"><b>${m.label}</b><span class="muted small">${m.desc}</span><span class="small">Practice completion &middot; ${m.perDay} session${m.perDay > 1 ? "s" : ""}/day</span></button>`).join("")}</div>
+    <button class="btn wide" data-a="w2">Next</button>
+  </div>`);
+  return render(`
+  <div class="stack" style="padding-top:18px">
+    <span class="label">Before you start</span>
+    <h2>Set up like a real interview</h2>
+    <div class="card stack small">
+      <p><b>Phone at eye level</b>, about an arm's length away. Lean it on books or use a stand.</p>
+      <p><b>Light on your face</b>, quiet room. Headphones are optional.</p>
+      <p><b>The interviewer's face sits right under your front camera.</b> Looking at their eyes is the same as eye contact on a video call.</p>
+      <p><b>Voice answers need Dictation on:</b> Settings &rarr; General &rarr; Keyboard &rarr; Enable Dictation. If voice ever fails, you can type instead.</p>
+    </div>
+    <div class="card stack small">
+      <h3>Your privacy</h3>
+      <p>Camera frames are processed in this browser and are not recorded by this app. Optional audio recording keeps answers in memory for playback. Automatic result and audio uploads are disabled. Progress is saved in browser storage; Share results lets you explicitly send an export. Fonts, scripts and face models load from external providers. Browser voice recognition and speech services may send audio or text to their providers; on-device speech processing is not guaranteed. Choose typing and disable the camera if you do not want to use these features.</p>
+      <label class="row"><input type="checkbox" id="camok" ${S.settings.camera ? "checked" : ""}> Use my camera for eye-contact coaching</label>
+    </div>
+    <button class="btn wide" data-a="w3">Start my Baseline Interview</button>
+    <p class="muted small">This is a practice and skills tool, not therapy or a guarantee of a job offer.</p>
+  </div>`);
+}
+H.w1 = () => { S.profile.name = $("#nm").value.trim().slice(0, 30) || "Friend"; S.profile.job = $("#job").value; save(); viewWelcome(1); };
+H.mode = d => { S.settings.mode = d.k; save(); document.querySelectorAll("[data-a=mode]").forEach(b => b.classList.toggle("on", b.dataset.k === d.k)); };
+H.w2 = () => viewIntake(true);
+H.w3 = () => { S.settings.camera = $("#camok").checked; S.profile.setupDone = true; save(); unlockAudio(); openPrep("baseline"); };
+function audioRetryNotice(needed) {
+  let notice = document.getElementById("audio-retry");
+  if (!needed) { if (notice) notice.remove(); return; }
+  if (notice) return;
+  notice = document.createElement("div"); notice.id = "audio-retry"; notice.setAttribute("role", "status");
+  notice.style.cssText = "position:sticky;top:0;z-index:9998;background:#fff0c2;color:#222;padding:12px";
+  notice.innerHTML = 'Audio could not start. <button type="button">Tap to retry audio</button> You can still read the questions and type answers.';
+  notice.querySelector("button").onclick = unlockAudio;
+  document.body.prepend(notice);
+}
+function unlockAudio() {
+  try {
+    if (!AC) AC = new (window.AudioContext || window.webkitAudioContext)();
+    Promise.resolve(AC.resume()).then(() => audioRetryNotice(AC.state !== "running"), () => audioRetryNotice(true));
+  } catch (e) { audioRetryNotice(true); }
+  try { const u = new SpeechSynthesisUtterance(" "); u.volume = 0; speechSynthesis.speak(u); } catch (e) {}
+}
+
+/* --- Home --- */
+function viewHome() {
+  const m = MODES[S.settings.mode], ni = nextIndex(), recs = lessonRecs();
+  const base = recs.find(r => r.lessonId === "baseline");
+  const lastMeasure = [...recs].reverse().find(r => LESSON[r.lessonId].kind === "measure");
+  const due = reviewsDue(), dt = doneToday();
+  const planLine = dt >= m.perDay ? `Today's plan is done (${dt}/${m.perDay}). Rest helps it stick. Extra reps are a bonus.` :
+    `Session ${dt + 1} of ${m.perDay} today${m.perDay > 1 ? ". Spacing sessions a few hours apart makes skills stick faster." : "."}`;
+  const grad = isDone(LESSON.final);
+  render(`
+  <div class="stack" style="padding-top:8px">
+    <div class="spread"><span class="brand">PAYDIRT</span><div class="row">${base ? `<button class="chip" data-a="plan">My plan</button>` : ""}<button class="chip" data-a="jobs">Job hunt</button><button class="chip" data-a="progress">Progress</button><button class="chip" data-a="settings">Settings</button></div></div>
+    <h1>Hey ${esc(first())}.</h1>
+    ${S.intake ? "" : `<div class="card stack"><b>3 minutes to make this about you</b><p class="small muted">Tell the app about your dishes, training and goals, and it will help you turn them into interview stories.</p><button class="btn wide" data-a="intake">Tell us about you</button></div>`}
+    <div class="ticket stack">
+      <div class="spread"><span class="label">${esc(m.label)} mode</span><span class="pill warm">${dt}/${m.perDay} today</span></div>
+      <p>${planLine}</p>
+      ${ni != null ? `<button class="btn wide" data-a="prep" data-id="${LESSONS[ni].id}">${prog(LESSONS[ni].id).attempts ? "Continue" : "Start"}: ${esc(LESSONS[ni].title)}</button>` : `<p><b>You've finished the full program.</b> Keep sharp with refresh reps below.</p>`}
+      ${S.adapt.notes.length ? `<p class="small muted">${esc(S.adapt.notes[S.adapt.notes.length - 1])}</p>` : ""}
+    </div>
+    ${base ? `<div class="card spread"><div><span class="label">Baseline &rarr; latest practice estimate</span><p style="font-family:var(--display);font-size:1.6rem;font-weight:800">${base.score}${lastMeasure && lastMeasure !== base ? ` &rarr; ${lastMeasure.score}` : ""}</p></div>${lastMeasure && lastMeasure !== base && lastMeasure.score > base.score ? `<span class="pill good">+${lastMeasure.score - base.score}</span>` : `<span class="pill">measured</span>`}</div>` : ""}
+    ${due.length ? `<div class="card stack"><span class="label">Refresh reps due</span><p class="small muted">Optional replays of completed practice. Completion records participation, not mastery.</p><div class="row">${due.map(l => `<button class="chip" data-a="prep" data-id="${l.id}" data-review="1">${esc(l.title)}</button>`).join("")}</div></div>` : ""}
+    ${grad ? `<div class="card"><h3>Graduate</h3><p class="small muted">You've completed the Final Interview. Check Progress to see your whole journey.</p></div>` : ""}
+    <span class="label">Your path</span>
+    <div class="path">${LESSONS.map((l, i) => {
+      const p = prog(l.id), done = isDone(l), open = unlocked(i), isNext = i === ni;
+      const status = done ? `<span class="pill good">Practice complete</span>` : p.attempts ? `<span class="pill warm">Practice estimate ${p.best}</span>` : "";
+      return `<button class="step ${done ? "done" : ""} ${isNext ? "next" : ""} ${l.kind === "measure" ? "measure" : ""}" ${open ? "" : "disabled"} data-a="prep" data-id="${l.id}">
+        <span class="num">${done ? "&#10003;" : l.kind === "measure" ? "&#9678;" : i}</span>
+        <span style="min-width:0"><b style="font-family:var(--display)">${esc(l.title)}</b><br><span class="small muted">${esc(l.sub)}${l.cast.length > 1 && !l.single ? ` &middot; ${l.cast.length} people` : ""}</span></span>
+        ${status}</button>`;
+    }).join("")}</div>
+  </div>`);
+}
+H.home = () => viewHome();
+
+/* --- Prep (pre-lesson instruction) --- */
+let pendingReview = false;
+function openPrep(id, review) {
+  pendingReview = !!review;
+  const l = LESSON[id], m = MODES[S.settings.mode], p = prog(id);
+  const calm = S.adapt.calm;
+  render(`
+  <div class="stack" style="padding-top:8px">
+    <div class="spread"><button class="chip" data-a="home">&larr; Back</button><span class="label">${l.kind === "measure" ? "Measured interview" : review ? "Refresh rep" : "Lesson"}</span></div>
+    <div class="row">${l.cast.slice(0, 3).map(c => `<div style="width:64px">${avatarSVG("p" + c, CH[c])}</div>`).join("")}</div>
+    <h1>${esc(l.title)}</h1>
+    <p>${esc(l.goal)}</p>
+    <div class="card stack"><span class="label">How to win this one</span>${l.tips.map(t => `<p>&bull; ${esc(t)}</p>`).join("")}</div>
+    ${storyHints(l)}
+    ${l.example ? `<details><summary>Hear a model answer</summary><p style="margin-top:8px">${esc(l.example.replace("{name}", first()))}</p><button class="chip" style="margin-top:10px" data-a="playex" data-id="${id}">Play it out loud</button></details>` : ""}
+    ${calm ? `<div class="card stack"><span class="label">30-second reset</span><p class="small">Breathe in for 4, hold 4, out for 4, hold 4. Twice. Then tap start. Steady breath means a steady voice.</p></div>` : ""}
+    <div class="kv small muted"><span>With</span><span>${l.cast.map(c => esc(CH[c].short)).join(", ")}</span>
+      <span>Questions</span><span>${l.kind === "measure" ? 7 : m.q + (m.rapid ? " + rapid round" : "")}</span>
+      <span>Completion</span><span>Respond to every prompt; no score threshold</span>
+      <span>Attempts so far</span><span>${p.attempts}</span></div>
+    <button class="btn wide" data-a="go" data-id="${id}">I'm ready</button>
+  </div>`);
+}
+H.prep = d => openPrep(d.id, d.review === "1");
+H.playex = d => { unlockAudio(); speak(LESSON[d.id].example.replace("{name}", first()), LESSON[d.id].cast[0]); };
+H.go = d => { unlockAudio(); runLesson(d.id); };
+
+/* --- Live lesson --- */
+let RUN = null;
+function layoutFor(l) { return l.single ? ["c"] : l.cast.length === 1 ? ["c"] : l.cast.length === 2 ? ["l", "r"] : ["l", "c", "r"]; }
+function posOf(l, id) { if (l.single || l.cast.length === 1) return "c"; return layoutFor(l)[l.cast.indexOf(id)]; }
+function stageHTML(l, who) {
+  // Single-speaker lessons keep every character's tile on stage and show only whoever is talking.
+  const ids = l.cast, shown = l.single ? 1 : ids.length;
+  return `<div class="stage"><div class="tiles"></div><div class="faces n${shown}">${ids.map(id => `<div class="face" id="f-${id}" data-pos="${posOf(l, id)}" ${l.single && id !== who ? "hidden" : ""}><div class="ring"></div><div class="avbox"><div id="nb-${id}">${avatarSVG(id, CH[id])}</div><div class="th" id="th-${id}"></div></div><span class="tag">${esc(CH[id].short)}${shown < 3 ? ` &middot; ${esc(CH[id].role)}` : ""}</span></div>`).join("")}</div></div>`;
+}
+function liveShell(l, who) {
+  render(`${stageHTML(l, who)}
+  <div class="stack" style="margin-top:14px">
+    <div class="spread"><div class="dots" id="dots"></div><div class="row"><span class="eyedot" id="eyedot"><i></i>${S.settings.camera ? "eyes" : "camera off"}</span><button class="chip" data-a="quit">End</button></div></div>
+    <p class="caption" id="cap">${S.settings.captions ? "" : ""}</p>
+    <p class="muted small" id="fallback-note" role="status"></p>
+    <p class="muted small" id="status">Getting ready&hellip;</p>
+    <div id="ctl" class="stack"></div>
+  </div>`, true);
+  startBlinking();
+}
+function setSpeaker(id) {
+  const single = RUN && LESSON[RUN.id].single;
+  document.querySelectorAll(".face").forEach(f => { const me = f.id === "f-" + id; if (single) f.hidden = !me; f.classList.toggle("speaking", me); f.classList.toggle("dim", !me && !single); });
+}
+function setDots(i, n) { const d = $("#dots"); if (d) d.innerHTML = Array.from({ length: n }, (_, k) => `<i class="${k < i ? "done" : k === i ? "on" : ""}"></i>`).join(""); }
+function status(t) { const s = $("#status"); if (s) s.textContent = t; }
+function caption(t) { const c = $("#cap"); if (c) c.textContent = S.settings.captions ? t : ""; }
+
+function buildQueue(l, attempt) {
+  if (l.kind === "measure") return FORMS[l.form].map(x => ({ ...x }));
+  const m = MODES[S.settings.mode];
+  const set = l.sets[attempt % l.sets.length];
+  let q = set.slice(0, Math.min(m.q, set.length)).map(x => ({ ...x }));
+  // keep a closing question at the end if the set has one
+  const close = set.find(x => x.t === "close"); if (close && !q.includes(close) && m.q >= 4) q[q.length - 1] = { ...close };
+  if (m.rapid) { const lead = l.single ? "tony" : l.cast[0]; [...RAPID].sort(() => Math.random() - 0.5).slice(0, 3).forEach(r => q.push({ ...r, by: lead })); }
+  return q;
+}
+function followUp(item, m, used, l) {
+  if (l.kind === "measure" || item.isFU || item.t === "rapid" || item.t === "greet" || item.t === "close") return null;
+  const mode = MODES[S.settings.mode]; if (used >= mode.fu) return null;
+  if (m.words < 12) return { t: item.t, q: pick(FOLLOWUPS.slice(0, 3)) };
+  if (item.t === "story" && m.star < 2) return { t: "story", q: FOLLOWUPS[3] };
+  if (S.settings.mode === "boot" && Math.random() < 0.5) return { ...pick(PRESSURE) };
+  if (S.settings.mode !== "steady" && Math.random() < 0.4) return { t: "why", q: FOLLOWUPS[4] };
+  return null;
+}
+async function calibrate(l) {
+  const generation = mediaGeneration;
+  const lay = layoutFor(l), ids = l.single ? [l.cast[0]] : l.cast;
+  const targets = {}, spreads = [];
+  status("Quick eye setup (a few seconds).");
+  for (let i = 0; i < lay.length; i++) {
+    const id = ids[i] || ids[0], f = $("#f-" + id);
+    document.querySelectorAll(".face").forEach(x => x.classList.remove("target")); f && f.classList.add("target");
+    caption(`Look into ${CH[id].short}'s eyes and hold still…`);
+    await sleep(900);
+    if (generation !== mediaGeneration) return false;
+    let pts = await collect(1300);
+    if (generation !== mediaGeneration) return false;
+    if (pts.length < 5) { caption("I can't see your face yet. Hold the phone at eye level with light on your face."); await sleep(2500); pts = await collect(1500); }
+    if (pts.length < 5) { document.querySelectorAll(".face").forEach(x => x.classList.remove("target")); return false; }
+    targets[lay[i]] = { x: mean(pts.map(p => p.x)), y: mean(pts.map(p => p.y)) };
+    spreads.push(sd(pts.map(p => p.x)), sd(pts.map(p => p.y)));
+  }
+  document.querySelectorAll(".face").forEach(x => x.classList.remove("target"));
+  const ks = Object.values(targets);
+  let sep = 99; for (let i = 0; i < ks.length; i++) for (let j = i + 1; j < ks.length; j++) sep = Math.min(sep, Math.hypot(ks[i].x - ks[j].x, ks[i].y - ks[j].y));
+  const spread = mean(spreads);
+  const tolX = ks.length > 1 ? clamp(sep * 0.6, 4, 12) : Math.max(7, spread * 3);
+  V.calib = { targets, tolX, tolY: Math.max(8, spread * 3), quality: { spread: +spread.toFixed(2), sep: ks.length > 1 ? +sep.toFixed(1) : null } };
+  return true;
+}
+function getAnswer(item, recordIt) {
+  return new Promise(resolve => {
+    const ctl = $("#ctl"), t0 = Date.now();
+    let answering = false, answerGeneration = 0;
+    let L = null, typed = S.settings.input === "type" || !SR, firstKey = null, finished = false, repeats = 0;
+    let timer;
+    cancelAnswer = () => { if (finished) return; finished = true; clearTimeout(timer); if (L) L.cancel(); recRelease(); resolve(null); };
+    const finish = async () => {
+      if (finished) return; finished = true; clearTimeout(timer); cancelAnswer = null;
+      const generation = mediaGeneration;
+      let text = typed ? ($("#ans") || {}).value || "" : L ? await L.stop() : "";
+      if (generation !== mediaGeneration) { resolve(null); return; }
+      const blob = recordIt ? await recStop() : null;
+      if (generation !== mediaGeneration) { resolve(null); return; }
+      recRelease();
+      resolve({ text, timing: { start: t0, first: typed ? firstKey : (L && L.firstAt), end: Date.now() }, typed, repeats, blob });
+    };
+    const drawVoice = () => {
+      ctl.innerHTML = `<button class="btn mic" id="micb">Tap to answer</button><p class="live-tx" id="tx"></p><div class="row"><button class="chip" id="rep">Repeat question</button><button class="chip" id="typ">Type instead</button></div>`;
+      const startListening = () => {
+        if (finished) return;
+        if (L && L.active) return finish();
+        L = new Listener((t, failed) => { const tx = $("#tx"); if (tx) tx.textContent = t; if (failed) { typed = true; drawType("Voice is unavailable. You can type your answer instead."); } });
+        // Called directly by a user tap, never after awaiting recording permission.
+        if (!L.start()) { typed = true; return drawType("Voice isn't available in this browser. Type your answer."); }
+        $("#micb").textContent = "Done answering"; $("#micb").classList.add("rec");
+        $("#micb").onclick = startListening;
+        status("Listening. Tap Done when you finish.");
+      };
+      $("#micb").onclick = async () => {
+        if (!recordIt) return startListening();
+        if (answering) return; answering = true; const generation = answerGeneration;
+        const ready = await recStart(); answering = false;
+        if (finished || generation !== answerGeneration) { recRelease(); return; }
+        if (!ready) { typed = true; return drawType("Recording could not start. Type your answer, or disable recording in Settings before retrying voice."); }
+        $("#micb").textContent = "Tap to start speaking";
+        $("#micb").onclick = startListening;
+        status("Microphone recording is ready. Tap Start speaking to activate voice recognition, or choose Type instead.");
+      };
+      $("#rep").onclick = async () => { repeats++; answerGeneration++; mediaGeneration++; stopCamera(); if (L) L.cancel(); recRelease(); L = null; drawVoice(); status("Here it is again."); await speak(item.q, item.by); status("Your turn. Tap the button, then speak."); };
+      $("#typ").onclick = async () => { if (L) L.cancel(); typed = true; drawType(); };
+    };
+    const drawType = msg => {
+      answerGeneration++; mediaGeneration++; stopCamera(); if (L) L.cancel(); recRelease();
+      ctl.innerHTML = `${msg ? `<p class="small muted">${esc(msg)}</p>` : ""}<textarea id="ans" placeholder="Type what you'd say out loud"></textarea><button class="btn wide" id="sub">Done</button>`;
+      $("#ans").addEventListener("input", () => { if (!firstKey) firstKey = Date.now(); }, { once: false });
+      $("#sub").onclick = finish; status("Type your answer the way you'd say it.");
+    };
+    typed ? drawType() : drawVoice();
+    timer = setTimeout(() => { if (!finished) finish(); }, 180000);
+  });
+}
+async function runLesson(id) {
+  const l = LESSON[id], p = prog(id), attempt = p.attempts;
+  const queue = buildQueue(l, attempt);
+  stopSession();
+  const run = RUN = { id, start: Date.now(), items: [], quit: false };
+  const lead = l.single ? queue[0].by : l.cast[0];
+  liveShell(l, lead);
+  setSpeaker(lead);
+  queue.forEach(i => audioBuffer(i.by, i.q.replace("{name}", first())));
+  status("Getting the interviewers ready…");
+  const avatarsReady = await initHeads([...new Set(queue.map(i => i.by))], status);
+  if (!avatarsReady && !run.quit && RUN === run) $("#fallback-note").textContent = "3D faces are unavailable. Simple faces and text questions remain available; audio plays when supported. You can type answers.";
+  if (run.quit || RUN !== run) { disposeHeads(); return; }
+  // camera + calibration
+  let eyes = false;
+  if (S.settings.camera) {
+    status("Starting camera…");
+    if (await cameraFromTap()) {
+      if (run.quit || RUN !== run) return;
+      $("#cam").className = S.settings.selfView ? "" : "hide";
+      status("Loading eye coaching (first time takes a moment)…");
+      if (await loadVision() && !run.quit && RUN === run) { if (!V.timer) loop(); eyes = await calibrate(l); }
+    }
+    if (!eyes) { stopCamera(); status("Eye coaching is off for this round. Everything else still counts."); await sleep(1500); }
+  }
+  if (run.quit || RUN !== run) return;
+  V.onFrame = where => {
+    const dot = $("#eyedot"); if (!dot || !V.acc) return;
+    const on = where && where === V.acc.target; dot.classList.toggle("on", !!on);
+    if (S.settings.eyeLight) document.querySelectorAll(".face").forEach(f => f.classList.toggle("contact", f.dataset.pos === where && f.dataset.pos === V.acc.target));
+  };
+  let fuUsed = 0;
+  for (let i = 0; i < queue.length; i++) {
+    if (run.quit || RUN !== run) return;
+    const item = queue[i]; item.q = item.q.replace("{name}", first());
+    setSpeaker(item.by); setDots(i, queue.length);
+    const target = posOf(l, item.by);
+    if (eyes) V.acc = { target, listen: { n: 0, face: 0, hit: 0 }, answer: { n: 0, face: 0, hit: 0 } };
+    V.phase = eyes ? "listen" : null;
+    status(`${CH[item.by].short} is asking…`); caption(item.q);
+    const ff = $("#f-" + item.by); ff && ff.firstElementChild.nextElementSibling.classList.remove("nod");
+    await speak(item.q, item.by);
+    if (run.quit || RUN !== run) return;
+    V.phase = eyes ? "answer" : null;
+    ff && ff.querySelector("#nb-" + item.by) && ff.querySelector("#nb-" + item.by).classList.add("nod");
+    status("Your turn. Tap the button, then speak.");
+    const ans = await getAnswer(item, l.kind === "measure" && S.consent.record);
+    if (run.quit || RUN !== run) return;
+    V.phase = null; ff && ff.querySelector("#nb-" + item.by) && ff.querySelector("#nb-" + item.by).classList.remove("nod");
+    const m = analyzeAnswer(item, ans.text, ans.timing, eyes ? V.acc.answer : null);
+    if (eyes && V.acc.listen.n > 5) m.eyeListenPct = +(V.acc.listen.hit / V.acc.listen.n).toFixed(2);
+    run.blobs = run.blobs || []; run.blobs[run.items.length] = ans.blob || null;
+    run.items.push({ by: item.by, t: item.t, q: item.q, isFU: !!item.isFU, text: S.settings.transcripts ? ans.text : null, typed: ans.typed, repeats: ans.repeats, m });
+    $("#ctl").innerHTML = "";
+    const fu = followUp(item, m, fuUsed, l);
+    if (fu) { fuUsed++; queue.splice(i + 1, 0, { ...fu, by: item.by, isFU: true }); }
+    else if (i < queue.length - 1 && queue[i + 1].by === item.by && Math.random() < 0.6) { caption(""); await speak(pick(CH[item.by].acks), item.by); }
+  }
+  setDots(queue.length, queue.length);
+  const closer = l.single ? queue[queue.length - 1].by : l.cast[0];
+  caption("That's everything. Thanks so much for your time today."); status("Wrapping up…");
+  await speak(CLOSER.replace("{name}", first()), closer);
+  if (run.quit || RUN !== run) return;
+  V.phase = null; V.acc = null; V.onFrame = null;
+  stopCamera(); disposeHeads(); recRelease();
+  await finishLesson(l, eyes);
+  deliverAudio(l.id, run.blobs || []);
+}
+H.quit = () => {
+  const d = modal(`<h3>End this round?</h3><p class="muted">Nothing from this round will be saved. You can start it again any time.</p><div class="row"><button class="btn" id="q1">End round</button><button class="btn ghost" id="q2">Keep going</button></div>`);
+  d.querySelector("#q2").onclick = () => d.remove();
+  d.querySelector("#q1").onclick = () => { d.remove(); if (RUN) RUN.quit = true; try { speechSynthesis.cancel(); } catch (e) {} V.phase = null; V.acc = null; V.onFrame = null; stopCamera(); Object.values(HEADS).forEach(h => { try { h.stopSpeaking(); } catch (e) {} }); disposeHeads(); viewHome(); };
+};
+
+/* --- Results --- */
+let LAST = null;
+async function finishLesson(l, eyes) {
+  const p = prog(l.id), items = RUN.items, { score, comps } = lessonScore(items);
+  const mark = null, completed = practiceComplete(items);
+  const prevBest = p.best;
+  p.attempts++; p.lastAt = Date.now(); p.best = Math.max(p.best || 0, score);
+  if (completed) {
+    if (!p.completed) p.completedAt = Date.now();
+    p.completed = true;
+    if (pendingReview) p.reviews++;
+  }
+  const avg = k => { const v = items.map(i => i.m[k]).filter(x => x != null); return v.length ? +mean(v).toFixed(2) : null; };
+  const kpi = { eyeAnswer: avg("eyePct"), eyeListen: avg("eyeListenPct"), wpm: avg("wpm") && Math.round(avg("wpm")), fillersPer100: avg("fillerRate"), latency: avg("latency"),
+    wordsPerAnswer: avg("words") && Math.round(avg("words")), starAvg: avg("star"), skillAcc: avg("expectFrac"), repeats: items.reduce((s, i) => s + i.repeats, 0),
+    typedShare: +(items.filter(i => i.typed).length / (items.length || 1)).toFixed(2), followUps: items.filter(i => i.isFU).length };
+  const body = { app: VERSION, lessonId: l.id, kind: l.kind || "lesson", review: pendingReview, attempt: p.attempts, form: l.kind === "measure" ? l.form : (p.attempts - 1) % (l.sets ? l.sets.length : 1),
+    mode: S.settings.mode, passMark: mark, score, passed: false, completed, progression: "non-empty-practice-completion", comps, kpi, eyes, calib: eyes && V.calib ? V.calib.quality : null,
+    durationSec: Math.round((Date.now() - RUN.start) / 1000), date: today(), at: new Date().toISOString(), items };
+  await appendRecord("lesson", body);
+  save(); LAST = { l, body, prevBest, blobs: RUN.blobs || [] };
+  deliver("lesson", `${l.title}: ${score}${body.completed ? " (practice complete)" : ""}`, { lesson: body, hash: S.lastHash });
+  viewResults();
+}
+function ringSVG(score, mark) {
+  const r = 50, c = 2 * Math.PI * r, f = clamp(score / 100);
+  return `<svg class="ringsvg" viewBox="0 0 118 118"><circle cx="59" cy="59" r="${r}" fill="none" stroke="var(--panel2)" stroke-width="12"/>
+  <circle cx="59" cy="59" r="${r}" fill="none" stroke="${mark == null || score >= mark ? "var(--mint)" : "var(--saffron)"}" stroke-width="12" stroke-linecap="round" stroke-dasharray="${c * f} ${c}" transform="rotate(-90 59 59)"/>
+  <text x="59" y="66" text-anchor="middle" font-family="Bricolage Grotesque, system-ui" font-weight="800" font-size="30" fill="var(--text)">${score}</text></svg>`;
+}
+function viewResults() {
+  const { l, body, prevBest } = LAST, items = body.items, c = body.comps;
+  const ranked = Object.keys(WEIGHTS).filter(k => c[k] != null).sort((a, b) => c[b] - c[a]);
+  const wins = ranked.filter(k => c[k] >= 0.7).slice(0, 2); if (!wins.length) wins.push(ranked[0]);
+  const focus = ranked[ranked.length - 1];
+  const headline = body.completed ? "Practice complete. Continue when you are ready." : "Some responses were empty. Repeat this practice to complete it.";
+  const delta = prevBest != null && body.score > prevBest ? `<span class="pill good">+${body.score - prevBest} over your best</span>` : "";
+  render(`
+  <div class="stack" style="padding-top:8px">
+    <span class="label">${esc(l.title)} &middot; attempt ${body.attempt}</span>
+    <p class="small muted"><b>Practice estimate</b> based on simple text and timing rules, not a validated assessment or judgment of ability. Progression depends only on completing the round with a non-empty response to each prompt, not on this estimate. Gaze, pace, latency, keywords and STAR structure never decide completion. Optional gaze coaching is not scored.</p>
+    <div class="score">${ringSVG(body.score, body.passMark)}<div class="stack" style="gap:6px"><h2>${esc(headline)}</h2>${delta}</div></div>
+    <div class="card stack"><span class="label">What you did well</span>${wins.map(k => `<p>${esc(COACH[k].win)}</p>`).join("")}</div>
+    <div class="card stack"><span class="label">Your next level-up</span><p><b>${esc(COACH[focus].name)}.</b> ${esc(COACH[focus].next)}</p></div>
+    <div class="card stack"><span class="label">Skill meters</span>
+      ${Object.keys(WEIGHTS).map(k => c[k] == null ? "" : `<div><div class="spread small"><span>${COACH[k].name}</span><span>${Math.round(c[k] * 100)}</span></div><div class="bar ${c[k] < 0.6 ? "s" : ""}"><i style="width:${Math.round(c[k] * 100)}%"></i></div></div>`).join("")}
+      <div class="kv small muted" style="margin-top:6px">
+        ${body.kpi.eyeAnswer != null ? `<span>Optional gaze coaching (not scored)</span><span>${Math.round(body.kpi.eyeAnswer * 100)}%</span>` : ""}
+        ${body.kpi.wpm ? `<span>Speaking pace</span><span>${body.kpi.wpm} wpm</span>` : ""}
+        ${body.kpi.wordsPerAnswer ? `<span>Words per answer</span><span>${body.kpi.wordsPerAnswer}</span>` : ""}
+        ${body.kpi.latency != null ? `<span>Time to start answering</span><span>${body.kpi.latency}s</span>` : ""}
+        <span>Filler words per 100</span><span>${body.kpi.fillersPer100 ?? 0}</span>
+      </div>
+      ${body.kpi.eyeAnswer != null ? `<p class="small muted">Natural eye contact is about 50 to 85% of the time. 100% isn't the goal.</p>` : ""}
+    </div>
+    <details><summary>Answer by answer</summary><div class="stack" style="margin-top:10px">${items.map(i => `<div><p class="small muted">${esc(CH[i.by].short)}: “${esc(i.q)}”</p>${i.text != null ? `<p>${esc(i.text) || "<i class='muted'>(no answer heard)</i>"}</p>` : ""}<div>${i.m.tags.map(t => `<span class="tag2">${esc(t)}</span>`).join("")}</div>${LAST.blobs && LAST.blobs[items.indexOf(i)] ? `<audio controls preload="none" style="width:100%;margin-top:6px" src="${URL.createObjectURL(LAST.blobs[items.indexOf(i)])}"></audio>` : ""}</div>`).join("")}</div></details>
+    <button class="btn wide" data-a="survey">Next: 20-second check-in</button>
+  </div>`);
+}
+
+/* --- Survey + feedback filter + adaptation --- */
+let SV = null;
+H.survey = () => {
+  SV = { t0: Date.now(), comfort: null, useful: null, diff: null, hard: [] };
+  const sc = (k, lo, hi) => `<div class="scale">${[1, 2, 3, 4, 5].map(n => `<button class="chip" data-a="sv" data-k="${k}" data-v="${n}">${n}</button>`).join("")}</div><div class="spread small muted"><span>${lo}</span><span>${hi}</span></div>`;
+  render(`
+  <div class="stack" style="padding-top:8px">
+    <span class="label">Quick check-in</span><h2>How did that feel?</h2>
+    <div class="card stack"><b>How comfortable were you?</b>${sc("comfort", "Tense", "Relaxed")}</div>
+    <div class="card stack"><b>How useful was this round?</b>${sc("useful", "Not much", "Very")}</div>
+    <div class="card stack"><b>Difficulty</b><div class="row">${["Too easy", "Just right", "Too hard"].map(v => `<button class="chip" data-a="sv" data-k="diff" data-v="${v}">${v}</button>`).join("")}</div></div>
+    <div class="card stack"><b>What felt hardest? (pick any)</b><div class="row">${["Eye contact", "Thinking of answers", "Nerves", "Talking speed", "Panel questions", "Nothing really"].map(v => `<button class="chip" data-a="svm" data-v="${v}">${v}</button>`).join("")}</div></div>
+    <div class="card stack"><span class="label">Right now</span>${slider("sv-conf", "How confident do you feel about interviews?", "Not at all", "Very", (S.intake && S.intake.confidence) || 5)}${slider("sv-nerves", "How nervous do interviews make you?", "Calm", "Very nervous", (S.intake && S.intake.nerves) || 5)}</div>
+    <div class="card stack"><label for="cm"><b>Anything else? (optional)</b></label><textarea id="cm" placeholder="What would make this better for you?"></textarea></div>
+    <button class="btn wide" data-a="svdone">Save and continue</button>
+  </div>`);
+  bindSliders();
+};
+H.sv = (d, el) => { SV[d.k] = isNaN(+d.v) ? d.v : +d.v; el.parentElement.querySelectorAll(".chip").forEach(c => c.classList.toggle("on", c === el)); };
+H.svm = (d, el) => { const i = SV.hard.indexOf(d.v); i < 0 ? SV.hard.push(d.v) : SV.hard.splice(i, 1); el.classList.toggle("on"); };
+H.svdone = async () => {
+  const secs = (Date.now() - SV.t0) / 1000, comment = ($("#cm").value || "").trim().slice(0, 500);
+  const score = LAST.body.score;
+  const flags = [];
+  if (secs < 5) flags.push("rushed");
+  if (SV.comfort && SV.comfort === SV.useful && (SV.comfort === 1 || SV.comfort === 5) && secs < 9) flags.push("straight-lined");
+  const relevant = /(question|answer|voice|eye|camera|hard|easy|fast|slow|nerv|interview|panel|help|confus|hear|score|tim|practice|more|less|lesson|feel|like|hate|better|work)/i;
+  const commentUsable = comment.length >= 3 && relevant.test(comment) && !/^(.)\1+$/.test(comment);
+  if (comment && !commentUsable) flags.push("comment-filtered");
+  const valid = !flags.includes("rushed") && !flags.includes("straight-lined");
+  // Only valid answers change training. Perception gaps are recorded (useful KPI) but never raise difficulty.
+  const notes = [];
+  if (valid) {
+    if (SV.hard.includes("Nerves") || (SV.comfort && SV.comfort <= 2)) { S.adapt.calm = true; notes.push("Added a 30-second breathing reset before lessons."); }
+    else if (SV.comfort >= 4) S.adapt.calm = false;
+    const recentHard = S.records.filter(r => r.kind === "survey" && r.body.valid).slice(-2).filter(r => r.body.diff === "Too hard").length + (SV.diff === "Too hard" ? 1 : 0);
+    const order = Object.keys(MODES), mi = order.indexOf(S.settings.mode);
+    if (SV.diff === "Too hard" && !flags.some(f => f.startsWith("perception")) && recentHard >= 2 && mi > 0) notes.push(`Tip: switching to ${MODES[order[mi - 1]].label} mode for a few rounds can help. You can change it in Settings.`);
+    if (SV.diff === "Too easy" && mi < order.length - 1) notes.push(`If you want a different practice pace, try ${MODES[order[mi + 1]].label} mode in Settings when you're ready.`);
+    if (SV.hard.includes("Eye contact") && !S.settings.eyeLight) { S.settings.eyeLight = true; notes.push("Turned on the eye-contact light to help you practice."); }
+  }
+  if (notes.length) S.adapt.notes = notes.slice(-1);
+  await appendRecord("survey", { app: VERSION, lessonId: LAST.l.id, attempt: LAST.body.attempt, lessonHash: S.records.filter(r => r.kind === "lesson").slice(-1)[0].hash,
+    confidence: +$("#sv-conf").value, nerves: +$("#sv-nerves").value,
+    comfort: SV.comfort, useful: SV.useful, diff: SV.diff, hard: SV.hard, comment: commentUsable ? comment : (comment ? "[filtered]" : ""), secs: Math.round(secs), flags, valid, adaptations: notes, score, at: new Date().toISOString() });
+  save(); toast("Saved");
+  deliver("survey", `Check-in after ${LAST.l.title}: confidence ${$("#sv-conf") ? $("#sv-conf").value : "?"}/10`, { survey: S.records[S.records.length - 1].body });
+  // Right after the first Baseline, walk him through his coaching plan before anything else.
+  if (LAST.l.id === "baseline" && LAST.body.attempt === 1) viewPlan(); else viewHome();
+};
+
+/* --- Progress & export --- */
+function spark(vals) {
+  if (vals.length < 2) return "";
+  const w = 320, h = 70, p = 8, mx = 100, mn = 0;
+  const x = i => p + i * (w - 2 * p) / (vals.length - 1), y = v => h - p - (v - mn) / (mx - mn) * (h - 2 * p);
+  const d = vals.map((v, i) => `${i ? "L" : "M"}${x(i).toFixed(1)} ${y(v).toFixed(1)}`).join(" ");
+  return `<svg class="spark" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none"><path d="${d} L${x(vals.length - 1)} ${h - p} L${x(0)} ${h - p}Z" fill="rgba(79,209,165,.14)"/><path d="${d}" fill="none" stroke="var(--mint)" stroke-width="2.5"/><circle cx="${x(vals.length - 1)}" cy="${y(vals[vals.length - 1])}" r="4" fill="var(--mint)"/></svg>`;
+}
+H.progress = async () => {
+  const recs = lessonRecs(), ok = await verifyChain();
+  const measures = recs.filter(r => r.kind === "measure");
+  const b = measures[0], last = measures[measures.length - 1];
+  const row = (label, f, fmt = x => x) => `<tr><td>${label}</td><td>${b && f(b) != null ? fmt(f(b)) : "&ndash;"}</td><td>${last && last !== b && f(last) != null ? fmt(f(last)) : "&ndash;"}</td></tr>`;
+  const mins = Math.round(recs.reduce((s, r) => s + r.durationSec, 0) / 60), days = new Set(recs.map(r => r.date)).size;
+  render(`
+  <div class="stack" style="padding-top:8px">
+    <div class="spread"><button class="chip" data-a="home">&larr; Back</button><span class="label">Progress</span></div>
+    <h1>${esc(first())}'s journey</h1>
+    <div class="kv"><span>Rounds completed</span><span>${recs.length}</span><span>Practice time</span><span>${mins} min</span><span>Days practiced</span><span>${days}</span><span>Practice lessons completed</span><span>${LESSONS.filter(l => l.kind !== "measure" && isDone(l)).length} / ${LESSONS.filter(l => l.kind !== "measure").length}</span></div>
+    <div class="card stack"><span class="label">Every round's practice estimate</span>${spark(recs.map(r => r.score)) || `<p class="small muted">Your trend line appears after two rounds.</p>`}</div>
+    <div class="card stack"><span class="label">Measured interviews</span>
+      <div style="overflow-x:auto"><table class="tbl"><tr><th></th><th>Baseline</th><th>Latest</th></tr>
+      ${row("Practice estimate", r => r.score)}
+      ${row("Eye contact (answering)", r => r.kpi.eyeAnswer, x => Math.round(x * 100) + "%")}
+      ${row("Words per answer", r => r.kpi.wordsPerAnswer)}
+      ${row("Speaking pace (wpm)", r => r.kpi.wpm)}
+      ${row("Time to start (s)", r => r.kpi.latency)}
+      ${row("STAR story parts (of 3)", r => r.kpi.starAvg)}
+      ${row("Fillers per 100 words", r => r.kpi.fillersPer100)}
+      </table></div>
+      <p class="small muted">Baseline, Checkpoint and Final use the same format with different questions. Estimates are not validated assessments. Earlier versions included gaze in scores; those historical scores are preserved and are not directly comparable to v4.</p></div>
+    ${(() => { const sv = S.records.filter(r => r.kind === "survey" && r.body.confidence).map(r => r.body); const c0 = S.intake && S.intake.confidence, c1 = sv.length ? sv[sv.length - 1].confidence : null, n0 = S.intake && S.intake.nerves, n1 = sv.length ? sv[sv.length - 1].nerves : null;
+      return c0 ? `<div class="card stack"><span class="label">How you feel</span><div class="kv"><span>Confidence (of 10)</span><span>${c0}${c1 != null ? " &rarr; " + c1 : ""}</span><span>Nerves (of 10)</span><span>${n0}${n1 != null ? " &rarr; " + n1 : ""}</span></div></div>` : ""; })()}
+    ${S.jobs.length ? `<div class="card stack"><span class="label">Job hunt</span><div class="kv">${STAGES.filter(st => S.jobs.some(j => j.stage === st)).map(st => `<span>${st}</span><span>${S.jobs.filter(j => j.stage === st).length}</span>`).join("")}</div></div>` : ""}
+    <div class="card stack"><span class="label">Data integrity</span><p class="small">${ok ? "&#10003; All " + S.records.length + " records passed the local hash-chain consistency check. This is not proof of authenticity or protection against rewriting the local data and hashes." : "Local record consistency could not be confirmed."}</p></div>
+    <button class="btn wide" data-a="export">Share my results</button>
+  </div>`);
+};
+H.export = async () => {
+  const data = { app: "Paydirt", version: VERSION, exportedAt: new Date().toISOString(), profile: { name: S.profile.name, job: S.profile.job, created: S.profile.created },
+    settings: S.settings, intake: S.intake, jobs: S.jobs, consent: S.consent, progress: S.progress, chainValid: await verifyChain(), head: S.lastHash, records: S.records };
+  const text = JSON.stringify(data);
+  try { if (navigator.share) { await navigator.share({ title: "Paydirt results", text }); return; } } catch (e) { if (e && e.name === "AbortError") return; }
+  try { await navigator.clipboard.writeText(text); toast("Copied. Paste it in a text to Dad."); }
+  catch (e) { const d = modal(`<h3>Copy your results</h3><textarea readonly style="min-height:200px">${esc(text)}</textarea><button class="btn" id="cx">Close</button>`); d.querySelector("textarea").select(); d.querySelector("#cx").onclick = () => d.remove(); }
+};
+
+/* --- Settings --- */
+H.settings = () => {
+  const s = S.settings, tog = (k, label, sub) => `<label class="spread card" style="padding:12px"><span><b>${label}</b><br><span class="small muted">${sub}</span></span><input type="checkbox" data-set="${k}" ${s[k] ? "checked" : ""}></label>`;
+  render(`
+  <div class="stack" style="padding-top:8px">
+    <div class="spread"><button class="chip" data-a="home">&larr; Back</button><span class="label">Settings</span></div>
+    <h2>Training speed</h2>
+    <div class="stack">${Object.entries(MODES).map(([k, m]) => `<button class="opt ${s.mode === k ? "on" : ""}" data-a="mode" data-k="${k}"><b>${m.label}</b><span class="muted small">${m.desc}</span></button>`).join("")}</div>
+    <h2>Practice options</h2>
+    ${tog("camera", "Eye-contact coaching", "Uses the front camera on this phone only. Camera video is not recorded; optional answer audio recording is a separate setting.")}
+    ${tog("eyeLight", "Eye-contact light", "A green ring glows while you're looking at the right person.")}
+    ${tog("selfView", "Show my camera", "Some people find seeing themselves distracting. Off by default.")}
+    ${tog("captions", "Show questions as text", "Helps if a voice is hard to hear.")}
+    ${tog("transcripts", "Save what I said", "Lets you and your coach review your answers. Saved in this browser; included when you choose Share results.")}
+    <p class="small muted">Automatic result/audio uploads are disabled. External fonts, scripts and models use network services. Browser speech recognition may send audio to its provider. Use typing to avoid voice recognition.</p>
+    <label class="spread card" style="padding:12px"><span><b>Record measured-interview answers</b><br><span class="small muted">Audio only, for before/after ratings. Off unless you turn it on.</span></span><input type="checkbox" id="cs-rec" ${S.consent.record ? "checked" : ""}></label>
+    <button class="btn ghost wide" data-a="intake">Edit my stories and goals</button>
+    <label class="spread card" style="padding:12px"><span><b>Answer by typing</b><br><span class="small muted">Use if voice doesn't work on this device.</span></span><input type="checkbox" id="typeMode" ${s.input === "type" ? "checked" : ""}></label>
+    <div class="card stack"><label class="label" for="nm2">Name</label><input id="nm2" type="text" value="${esc(S.profile.name)}"></div>
+    <button class="btn ghost wide" data-a="reset">Erase all data on this phone</button>
+    <p class="small muted">Paydirt ${VERSION}</p>
+  </div>`);
+  document.querySelectorAll("[data-set]").forEach(i => i.onchange = () => { S.settings[i.dataset.set] = i.checked; save(); });
+  $("#cs-rec").onchange = e => { S.consent.record = e.target.checked; save(); appendRecord("consent", { ...S.consent, at: new Date().toISOString() }); };
+  $("#typeMode").onchange = e => { S.settings.input = e.target.checked ? "type" : "voice"; save(); };
+  $("#nm2").onchange = e => { S.profile.name = e.target.value.trim().slice(0, 30) || S.profile.name; save(); };
+};
+H.reset = () => {
+  const d = modal(`<h3>Erase everything?</h3><p class="muted">This deletes all scores and progress on this phone. Share your results first if you want to keep them.</p><div class="row"><button class="btn" id="r1">Erase</button><button class="btn ghost" id="r2">Cancel</button></div>`);
+  d.querySelector("#r2").onclick = () => d.remove();
+  d.querySelector("#r1").onclick = () => { stopSession(); S = defaultState(); LAST = null; SV = null; RUN = null; REC.chunks = []; save(); d.remove(); viewWelcome(0); };
+};
+
+/* ============ BOOT ============ */
+if (!window.isSecureContext) document.body.insertAdjacentHTML("afterbegin", `<p style="background:#f4b740;color:#2a1d00;padding:10px;margin:0;text-align:center">Open this page from an https:// link for camera and voice to work.</p>`);
+S.profile.setupDone ? viewHome() : viewWelcome(0);
+flushOutbox();
+</script>
+</body>
+</html>
