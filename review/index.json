@@ -1,0 +1,191 @@
+[
+  {
+    "id": "CI-S-02-FU",
+    "character": "dan",
+    "flag": true,
+    "duration_seconds": 0.992653,
+    "aligned_wpm": 313,
+    "audio_sha256": "de7ad06ed5d8ceb3cd1bd8a7b1de9b39addca7c7c119a03141905caeba7390da",
+    "transcript": "How would you organize them?"
+  },
+  {
+    "id": "CI-S-03-FU",
+    "character": "dan",
+    "flag": true,
+    "duration_seconds": 1.567347,
+    "aligned_wpm": 313,
+    "audio_sha256": "bda72de572f227afa9aca8fa04b1ffea2308ed258412135f6a264948d5a58c4a",
+    "transcript": "How would you clarify it?"
+  },
+  {
+    "id": "CB-S-02",
+    "character": "dan",
+    "flag": true,
+    "duration_seconds": 1.880816,
+    "aligned_wpm": 326,
+    "audio_sha256": "334a0daa543d965354dbc0a212d2a50ca731579f82fcfad231a97cd8eb45614c",
+    "transcript": "What if the chef corrects you in front of everyone?"
+  },
+  {
+    "id": "FI-S-02",
+    "character": "dan",
+    "flag": true,
+    "duration_seconds": 1.306122,
+    "aligned_wpm": 328,
+    "audio_sha256": "1e9722ebe4ad85a94f24e7eb69e164d2c90a0f688668dbb6bd6d4cb13be5a1f2",
+    "transcript": "Do you have any questions for us?"
+  },
+  {
+    "id": "FI-S-02-FU",
+    "character": "dan",
+    "flag": true,
+    "duration_seconds": 1.410612,
+    "aligned_wpm": 353,
+    "audio_sha256": "794878127abfdb209317eb54f3f9cb2ef777acfa2cf4e99997bd9b20a6f9ba71",
+    "transcript": "What would you want to know about training?"
+  },
+  {
+    "id": "FI-S-03",
+    "character": "dan",
+    "flag": true,
+    "duration_seconds": 1.645714,
+    "aligned_wpm": 338,
+    "audio_sha256": "0b1bfa75a81f81e29f2030d79d5a677682d457e79651db38f6a153c1240e8dca",
+    "transcript": "Is there anything else you want us to know?"
+  },
+  {
+    "id": "FI-S-03-FU",
+    "character": "dan",
+    "flag": true,
+    "duration_seconds": 2.037551,
+    "aligned_wpm": 330,
+    "audio_sha256": "a37679a5ca9f762e3da1337538c2029a03560b4deabb875294add6c5cd012fbe",
+    "transcript": "What is the strongest point you want to leave us with?"
+  },
+  {
+    "id": "FS-I-03",
+    "character": "keisha",
+    "flag": true,
+    "duration_seconds": 1.959184,
+    "aligned_wpm": 313,
+    "audio_sha256": "058e659a289fcf32eb3f5170255bced0134a78cb58f7a5f232fcfa6dbd6f5cd0",
+    "transcript": "What do you want a chef to remember about you?"
+  },
+  {
+    "id": "CI-I-01-FU",
+    "character": "dan",
+    "flag": true,
+    "duration_seconds": 0.992653,
+    "aligned_wpm": 375,
+    "audio_sha256": "54aa9bb77ebeefb4dad74917ea2ad172d094a3580d915cfc6e778a68749b4821",
+    "transcript": "When do you tell the chef?"
+  },
+  {
+    "id": "CI-I-02",
+    "character": "dan",
+    "flag": true,
+    "duration_seconds": 2.115918,
+    "aligned_wpm": 317,
+    "audio_sha256": "305e9bbfd97fb5d041e115d86d3027f6d778d8438e271bfcb4a187b6c52cd155",
+    "transcript": "How do you know your mise en place is actually ready?"
+  },
+  {
+    "id": "CB-I-03-FU",
+    "character": "dan",
+    "flag": true,
+    "duration_seconds": 1.724082,
+    "aligned_wpm": 321,
+    "audio_sha256": "3d459cf7fc832e14e858e81651d1ae30b6d125458056c30db1dddc9d7b806c26",
+    "transcript": "How do you turn that into a strong answer?"
+  },
+  {
+    "id": "FRP-I-03",
+    "character": "dan",
+    "flag": true,
+    "duration_seconds": 1.645714,
+    "aligned_wpm": 338,
+    "audio_sha256": "9cbf9aaf33eedf4ce19176415998b0f88dea33ed7de27552247eb40f55d746ec",
+    "transcript": "What kind of chef do you want to become?"
+  },
+  {
+    "id": "FI-I-03-FU",
+    "character": "dan",
+    "flag": true,
+    "duration_seconds": 1.48898,
+    "aligned_wpm": 341,
+    "audio_sha256": "1e3f7ac4f975910b13815207e83dbf556e95d208d54133475ff7231ebfebd6aa",
+    "transcript": "How would you answer it?"
+  },
+  {
+    "id": "SYT-BC-01-FU",
+    "character": "marisol",
+    "flag": true,
+    "duration_seconds": 4.440816,
+    "aligned_wpm": 95,
+    "audio_sha256": "7f23bdebd15b05e951de3da221d90764beb0a369fba4e2ec201d507115627be5",
+    "transcript": "Remove technical cooking skills. What strengths remain?"
+  },
+  {
+    "id": "TPP-BC-01",
+    "character": "marisol",
+    "flag": true,
+    "duration_seconds": 6.922449,
+    "aligned_wpm": 105,
+    "audio_sha256": "09548e27dfa1945d93c38f84c85215249ea796f0ca5c0e3c850692ae9fedfb31",
+    "transcript": "Chef asks about speed while manager asks about safety. Answer both directly."
+  },
+  {
+    "id": "EAT-BC-02-FU",
+    "character": "jordan",
+    "flag": true,
+    "duration_seconds": 4.205714,
+    "aligned_wpm": 101,
+    "audio_sha256": "bc43bbf7442912afd69596d53060d140fd86f8557820bd0e60cb9881442251f3",
+    "transcript": "They become defensive. Keep the conversation productive."
+  },
+  {
+    "id": "BI-S-01",
+    "character": "dan",
+    "flag": false,
+    "duration_seconds": 0.992653,
+    "aligned_wpm": 250,
+    "audio_sha256": "15d696cfec4c58cc13ed0f57cde58f02d483a451ba681bcf3c0a2d2232e9bc0d",
+    "transcript": "Tell me about yourself."
+  },
+  {
+    "id": "SS-S-01",
+    "character": "marisol",
+    "flag": false,
+    "duration_seconds": 2.586122,
+    "aligned_wpm": 234,
+    "audio_sha256": "09b87208adad148df92dbd0260503a924bace8518631b51eca73c728c695d874",
+    "transcript": "Tell me about something you cooked that made you proud."
+  },
+  {
+    "id": "FS-S-01",
+    "character": "keisha",
+    "flag": false,
+    "duration_seconds": 1.959184,
+    "aligned_wpm": 250,
+    "audio_sha256": "5b1ac44c7351a674a9e628d5a5d5c5cd65b07974c756deb904a4e3619700bd66",
+    "transcript": "How would you introduce yourself to the chef?"
+  },
+  {
+    "id": "EAT-S-02",
+    "character": "tony",
+    "flag": false,
+    "duration_seconds": 2.847347,
+    "aligned_wpm": 193,
+    "audio_sha256": "537aaae67b96363e26a0892340c49943779de91a190a5ea6e662023aff5928d4",
+    "transcript": "How would you ask when your next shift is?"
+  },
+  {
+    "id": "EAT-S-03",
+    "character": "jordan",
+    "flag": false,
+    "duration_seconds": 1.959184,
+    "aligned_wpm": 250,
+    "audio_sha256": "55400ebb705a0f73ba17cdd9aafe2ba629dde89c79459052b642ab6d64da70a3",
+    "transcript": "How would you ask a coworker for help?"
+  }
+]

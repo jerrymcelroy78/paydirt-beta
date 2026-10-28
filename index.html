@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<link rel="icon" href="data:,">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -124,7 +125,7 @@ summary{cursor:pointer;font-weight:700}
 </style>
 </head>
 <body>
-<div role="note" style="padding:10px 16px;background:#fff3cd;color:#332701;text-align:center">TEST VERSION: Ellen’s 3D avatar is unavailable; her simple face is shown. Practice, text questions and audio remain available.</div>
+<div role="note" style="padding:10px 16px;background:#fff3cd;color:#332701;text-align:center">TEST VERSION: Keisha’s and Ellen’s 3D avatars are unavailable; their simple faces are shown. Practice, text questions and audio remain available.</div>
 <!-- V4: automatic result/audio submission forms removed. -->
 
 
@@ -139,8 +140,13 @@ summary{cursor:pointer;font-weight:700}
 </script>
 <script type="module">
 "use strict";
+import { decideAdaptation, normalizeChallengeState, resetForManualMode, effectiveChallengeMode, allowBetweenQuestionAcknowledgement, answerSignalFor } from './modules/adaptation.mjs';
+import { questionId, chooseUnseen, historicalQuestionIds, shouldOfferBreathing } from './modules/questions.mjs';
+import { evaluateAnswer } from './modules/answer-evidence.mjs';
+import { readyBankItem, selectBankRound } from './modules/bank-readiness.mjs';
+import { BANK } from './modules/reviewed-bank.mjs';
 /* ============ CORE ============ */
-const VERSION = "0.9.0-beta.3-feedback";
+const VERSION = "0.9.1-beta.1-integration";
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const pick = a => a[Math.floor(Math.random() * a.length)];
@@ -158,10 +164,11 @@ const store = {
 };
 function defaultState() {
   return { v: 1, profile: { name: "", job: "Prep / line cook", created: Date.now(), setupDone: false },
-    settings: { mode: "steady", camera: true, captions: true, selfView: false, input: "voice", eyeLight: true, transcripts: true },
+    settings: { mode: "intensive", camera: true, captions: true, selfView: false, input: "voice", eyeLight: true, transcripts: true },
     intake: null, consent: { record: false, share: false }, jobs: [], outbox: [], progress: {}, records: [], lastHash: "GENESIS", adapt: { calm: false, notes: [] } };
 }
 let S = store.get("state", null) || defaultState();
+S.questionHistory = [...new Set([...(S.questionHistory || []), ...historicalQuestionIds(S.records, (S.profile.name || "").split(" ")[0])])];
 let saveFailed = false;
 function save() {
   const ok = store.set("state", S); saveFailed = !ok;
@@ -175,6 +182,8 @@ function save() {
   } else if (ok && notice) notice.remove();
   return ok;
 }
+function challengeMode() { return effectiveChallengeMode(MODES, S.settings.mode, S.adapt.phaseB); }
+function challengeContext() { const state = normalizeChallengeState(S.adapt.phaseB, S.settings.mode); return { level: state.level, manualRevision: state.manualRevision }; }
 const first = () => (S.profile.name || "there").split(" ")[0];
 
 async function sha(s) {
@@ -412,7 +421,9 @@ const audioReady = fetch("audio/index.json").then(r => r.ok ? r.json() : null).t
 function normalizedAudioText(text) {
   return text.normalize("NFC").replace(/[‘’]/g, "'").replace(/[“”]/g, '"').replace(/\s+/g, " ").trim();
 }
-function audioMatch(id, text) {
+function audioMatch(id, text, stableId) {
+  const bank = stableId && BANK_RECORDINGS[stableId];
+  if (bank?.verifiedBytes && bank.decoded && bank.releaseApproved && bank.character === id && bank.text === text) return {key:stableId, file:bank.file, meta:bank, outcome:"stable-bank-id"};
   if (!AUDIO) return { key: null, outcome: "manifest-unavailable" };
   const key = lineId(id, text);
   if (AUDIO[key]?.ch === id && AUDIO[key].text === text) return { key, outcome: "exact" };
@@ -420,10 +431,10 @@ function audioMatch(id, text) {
   const matches = Object.keys(AUDIO).filter(k => AUDIO[k].ch === id && normalizedAudioText(AUDIO[k].text) === normalized);
   return matches.length === 1 ? { key: matches[0], outcome: "typography-match" } : { key: null, outcome: matches.length ? "ambiguous" : "missing" };
 }
-function audioBuffer(id, text) {
-  const { key } = audioMatch(id, text);
+function audioBuffer(id, text, stableId) {
+  const match = audioMatch(id, text, stableId), { key } = match;
   if (!AC || !key) return null;
-  if (!bufCache.has(key)) bufCache.set(key, fetch("audio/" + key + ".mp3").then(r => { if (!r.ok) throw Error("Audio HTTP " + r.status); return r.arrayBuffer(); }).then(b => AC.decodeAudioData(b)).catch(() => { bufCache.delete(key); return null; }));
+  if (!bufCache.has(key)) bufCache.set(key, fetch(match.file || "audio/" + key + ".mp3").then(r => { if (!r.ok) throw Error("Audio HTTP " + r.status); return r.arrayBuffer(); }).then(b => AC.decodeAudioData(b)).catch(() => { bufCache.delete(key); return null; }));
   return bufCache.get(key);
 }
 async function initHeads(ids, onStatus) {
@@ -431,7 +442,7 @@ async function initHeads(ids, onStatus) {
   try { if (!TH) TH = (await import("./modules/talkinghead.mjs")).TalkingHead; } catch (e) { return false; }
   for (const id of ids) {
     if (generation !== mediaGeneration) return false;
-    if (HEADS[id] || id === "ellen") continue;
+    if (HEADS[id] || id === "ellen" || id === "keisha") continue;
     const el = document.getElementById("th-" + id); if (!el || !AV[id]) continue;
     try {
       const h = new TH(el, { lipsyncModules: ["en"], lipsyncLang: "en", cameraView: "head", modelFPS: 30,
@@ -508,12 +519,12 @@ function audioUnavailable(text) {
   note.hidden = !text;
 }
 function traceAudio(event) { /* Debug copy adds console instrumentation here. */ }
-async function speak(text, id) {
+async function speak(text, id, stableId) {
   const generation = mediaGeneration;
   await audioReady;
   if (generation !== mediaGeneration) return;
-  const match = audioMatch(id, text);
-  const p = audioBuffer(id, text), buf = p && await p;
+  const match = audioMatch(id, text, stableId);
+  const p = audioBuffer(id, text, stableId), buf = p && await p;
   if (generation !== mediaGeneration) return;
   const event = { character: id, text, requestedKey: lineId(id, text), manifestKey: match.key, lookup: match.outcome, source: "text-only" };
   audioUnavailable("");
@@ -522,7 +533,7 @@ async function speak(text, id) {
     if (generation !== mediaGeneration) return;
   }
   if (buf && AC?.state === "running") {
-    const meta = AUDIO[match.key], h = HEADS[id];
+    const meta = match.meta || AUDIO[match.key], h = HEADS[id];
     return new Promise(res => {
       let done = false; const fin = () => { if (!done) { done = true; res(); } };
       setTimeout(fin, buf.duration * 1000 + 3000);
@@ -964,7 +975,7 @@ function viewWelcome(step = 0) {
   </div>`);
 }
 H.w1 = () => { S.profile.name = $("#nm").value.trim().slice(0, 30) || "Friend"; S.profile.job = $("#job").value; save(); viewWelcome(1); };
-H.mode = d => { S.settings.mode = d.k; save(); document.querySelectorAll("[data-a=mode]").forEach(b => b.classList.toggle("on", b.dataset.k === d.k)); };
+H.mode = d => { if (!Object.hasOwn(MODES, d.k)) return; S.settings.mode = d.k; S.adapt.phaseB = resetForManualMode(S.adapt.phaseB, d.k); save(); document.querySelectorAll("[data-a=mode]").forEach(b => b.classList.toggle("on", b.dataset.k === d.k)); };
 H.w2 = () => viewIntake(true);
 H.w3 = () => { S.settings.camera = $("#camok").checked; S.profile.setupDone = true; save(); unlockAudio(); openPrep("baseline"); };
 function audioRetryNotice(needed) {
@@ -986,7 +997,7 @@ function unlockAudio() {
 
 /* --- Home --- */
 function viewHome() {
-  const m = MODES[S.settings.mode], ni = nextIndex(), recs = lessonRecs();
+  const m = challengeMode(), ni = nextIndex(), recs = lessonRecs();
   const base = recs.find(r => r.lessonId === "baseline");
   const lastMeasure = [...recs].reverse().find(r => LESSON[r.lessonId].kind === "measure");
   const due = reviewsDue(), dt = doneToday();
@@ -998,16 +1009,18 @@ function viewHome() {
     <div class="spread"><span class="brand">PAYDIRT</span><div class="row">${base ? `<button class="chip" data-a="plan">My plan</button>` : ""}<button class="chip" data-a="jobs">Job hunt</button><button class="chip" data-a="progress">Progress</button><button class="chip" data-a="settings">Settings</button></div></div>
     <h1>Hey ${esc(first())}.</h1>
     <button class="btn ghost wide" data-a="feedback">Copy my feedback for the team</button>
+    <a class="btn ghost wide" href="./review/">Review the 21 voice clips</a>
     ${S.intake ? "" : `<div class="card stack"><b>3 minutes to make this about you</b><p class="small muted">Tell the app about your dishes, training and goals, and it will help you turn them into interview stories.</p><button class="btn wide" data-a="intake">Tell us about you</button></div>`}
     <div class="ticket stack">
       <div class="spread"><span class="label">${esc(m.label)} mode</span><span class="pill warm">${dt}/${m.perDay} today</span></div>
       <p>${planLine}</p>
       ${ni != null ? `<button class="btn wide" data-a="prep" data-id="${LESSONS[ni].id}">${prog(LESSONS[ni].id).attempts ? "Continue" : "Start"}: ${esc(LESSONS[ni].title)}</button>` : `<p><b>You've finished the full program.</b> Keep sharp with refresh reps below.</p>`}
-      ${S.adapt.notes.length ? `<p class="small muted">${esc(S.adapt.notes[S.adapt.notes.length - 1])}</p>` : ""}
+      ${S.adapt.notes.length ? `<p class="small muted">${esc(S.adapt.notes.join(" "))}</p>` : ""}
     </div>
     ${base ? `<div class="card spread"><div><span class="label">Baseline &rarr; latest practice estimate</span><p style="font-family:var(--display);font-size:1.6rem;font-weight:800">${base.score}${lastMeasure && lastMeasure !== base ? ` &rarr; ${lastMeasure.score}` : ""}</p></div>${lastMeasure && lastMeasure !== base && lastMeasure.score > base.score ? `<span class="pill good">+${lastMeasure.score - base.score}</span>` : `<span class="pill">measured</span>`}</div>` : ""}
     ${due.length ? `<div class="card stack"><span class="label">Refresh reps due</span><p class="small muted">Optional replays of completed practice. Completion records participation, not mastery.</p><div class="row">${due.map(l => `<button class="chip" data-a="prep" data-id="${l.id}" data-review="1">${esc(l.title)}</button>`).join("")}</div></div>` : ""}
     ${grad ? `<div class="card"><h3>Graduate</h3><p class="small muted">You've completed the Final Interview. Check Progress to see your whole journey.</p></div>` : ""}
+    <p class="small muted">${recordedBankReady() ? "Recorded 90-question bank active. Unseen adjacent-tier questions may be used on retries; changes are logged." : "Original practice bank active. The new 90-question bank is waiting for verified recordings."}</p>
     <span class="label">Your path</span>
     <div class="path">${LESSONS.map((l, i) => {
       const p = prog(l.id), done = isDone(l), open = unlocked(i), isNext = i === ni;
@@ -1023,10 +1036,12 @@ H.home = () => viewHome();
 
 /* --- Prep (pre-lesson instruction) --- */
 let pendingReview = false;
-function openPrep(id, review) {
+function openPrep(id, review, retainQuestionReview = false) {
+  if (!retainQuestionReview) allowQuestionReview = false;
   pendingReview = !!review;
-  const l = LESSON[id], m = MODES[S.settings.mode], p = prog(id);
+  const l = LESSON[id], m = challengeMode(), p = prog(id);
   const calm = S.adapt.calm;
+  const selection = questionSelection(l);
   render(`
   <div class="stack" style="padding-top:8px">
     <div class="spread"><button class="chip" data-a="home">&larr; Back</button><span class="label">${l.kind === "measure" ? "Measured interview" : review ? "Refresh rep" : "Lesson"}</span></div>
@@ -1038,10 +1053,10 @@ function openPrep(id, review) {
     ${l.example ? `<details><summary>Hear a model answer</summary><p style="margin-top:8px">${esc(l.example.replace("{name}", first()))}</p><button class="chip" style="margin-top:10px" data-a="playex" data-id="${id}">Play it out loud</button></details>` : ""}
     ${calm ? `<div class="card stack"><span class="label">30-second reset</span><p class="small">Breathe in for 4, hold 4, out for 4, hold 4. Twice. Then tap start. Steady breath means a steady voice.</p></div>` : ""}
     <div class="kv small muted"><span>With</span><span>${l.cast.map(c => esc(CH[c].short)).join(", ")}</span>
-      <span>Questions</span><span>${l.kind === "measure" ? 7 : m.q + (m.rapid ? " + rapid round" : "")}</span>
+      <span>Questions available this round</span><span>${selection.questions.length}</span>
       <span>Completion</span><span>Respond to every prompt; no score threshold</span>
       <span>Attempts so far</span><span>${p.attempts}</span></div>
-    <button class="btn wide" data-a="go" data-id="${id}">I'm ready</button>
+    ${selection.questions.length ? `<button class="btn wide" data-a="go" data-id="${id}">I'm ready</button>${selection.review ? `<p class="small muted">You chose a review. Previously seen questions may repeat.</p>` : `<p class="small muted">Unseen questions first. This bank is finite; retries may have fewer questions.</p>`}` : `<p role="status">You've seen all available questions for this lesson. No new questions remain in this bank.</p>${recordedBankReady() ? "" : `<button class="btn wide" data-a="questionReview" data-id="${id}">Review previously seen questions</button>`}`}
   </div>`);
 }
 H.prep = d => openPrep(d.id, d.review === "1");
@@ -1076,25 +1091,37 @@ function setDots(i, n) { const d = $("#dots"); if (d) d.innerHTML = Array.from({
 function status(t) { const s = $("#status"); if (s) s.textContent = t; }
 function caption(t) { const c = $("#cap"); if (c) c.textContent = S.settings.captions ? t : ""; }
 
-function buildQueue(l, attempt) {
-  if (l.kind === "measure") return FORMS[l.form].map(x => ({ ...x }));
-  const m = MODES[S.settings.mode];
-  const set = l.sets[attempt % l.sets.length];
-  let q = set.slice(0, Math.min(m.q, set.length)).map(x => ({ ...x }));
-  // keep a closing question at the end if the set has one
-  const close = set.find(x => x.t === "close"); if (close && !q.includes(close) && m.q >= 4) q[q.length - 1] = { ...close };
-  if (m.rapid) { const lead = l.single ? "tony" : l.cast[0]; [...RAPID].sort(() => Math.random() - 0.5).slice(0, 3).forEach(r => q.push({ ...r, by: lead })); }
-  return q;
+let allowQuestionReview = false;
+let BANK_RECORDINGS = {};
+const bankReady = fetch('bank/recordings.json').then(r=>r.ok?r.json():{}).then(m=>{BANK_RECORDINGS=m;}).catch(()=>{});
+function recordedBankReady() { return BANK.length===90 && BANK.every(item=>readyBankItem(item,BANK_RECORDINGS)); }
+function questionSelection(l) {
+  const m = challengeMode();
+  if (recordedBankReady()) {
+    const round=selectBankRound(BANK,BANK_RECORDINGS,{lessonId:l.id,tier:m.level==='easy'?'steady':m.level,seen:S.questionHistory});
+    return {...round,review:false,total:9,unseen:round.pairs.length};
+  }
+  const pool = l.kind === "measure" ? FORMS[l.form] : l.sets.flat();
+  const base = chooseUnseen(pool, S.questionHistory, l.kind === "measure" ? 7 : m.q, allowQuestionReview);
+  if (m.rapid && l.kind !== "measure") {
+    const by = l.single ? "tony" : l.cast[0];
+    const rapid = chooseUnseen(RAPID.map(q => ({...q, by})), [...S.questionHistory, ...base.questions.map(q=>q.id)], 3, allowQuestionReview);
+    base.questions.push(...rapid.questions);
+  }
+  return base;
 }
+function buildQueue(l, attempt) { return questionSelection(l).questions; }
 function followUp(item, m, used, l) {
-  if (l.kind === "measure" || item.isFU || item.t === "rapid" || item.t === "greet" || item.t === "close") return null;
-  const mode = MODES[S.settings.mode]; if (used >= mode.fu) return null;
-  if (m.words < 12) return { t: item.t, q: pick(FOLLOWUPS.slice(0, 3)) };
-  if (item.t === "story" && m.star < 2) return { t: "story", q: FOLLOWUPS[3] };
-  if (S.settings.mode === "boot" && Math.random() < 0.5) return { ...pick(PRESSURE) };
-  if (S.settings.mode !== "steady" && Math.random() < 0.4) return { t: "why", q: FOLLOWUPS[4] };
-  return null;
+  if (item.bank || l.kind === "measure" || item.isFU || ["rapid","greet","close"].includes(item.t)) return null;
+  const mode = challengeMode(); if (used >= mode.fu) return null;
+  let choices = [];
+  if (m.words < 12) choices = FOLLOWUPS.slice(0,3).map(q=>({t:item.t,q}));
+  else if (item.t === "story" && m.star < 2) choices = [{t:"story",q:FOLLOWUPS[3]}];
+  else if (mode.level === "boot") choices = PRESSURE;
+  else if (mode.level !== "steady") choices = [{t:"why",q:FOLLOWUPS[4]}];
+  return chooseUnseen(choices.map(q=>({...q,by:item.by,isFU:true})), S.questionHistory, 1).questions[0] || null;
 }
+H.questionReview = d => { allowQuestionReview = true; openPrep(d.id, pendingReview, true); };
 async function calibrate(l) {
   const generation = mediaGeneration;
   const lay = layoutFor(l), ids = l.single ? [l.cast[0]] : l.cast;
@@ -1160,7 +1187,7 @@ function getAnswer(item, recordIt) {
         $("#micb").onclick = startListening;
         status("Microphone recording is ready. Tap Start speaking to activate voice recognition, or choose Type instead.");
       };
-      $("#rep").onclick = async () => { repeats++; answerGeneration++; mediaGeneration++; stopCamera(); if (L) L.cancel(); recRelease(); L = null; drawVoice(); status("Here it is again."); await speak(item.q, item.by); status("Your turn. Tap the button, then speak."); };
+      $("#rep").onclick = async () => { repeats++; answerGeneration++; mediaGeneration++; stopCamera(); if (L) L.cancel(); recRelease(); L = null; drawVoice(); status("Here it is again."); await speak(item.q, item.by, item.id); status("Your turn. Tap the button, then speak."); };
       $("#typ").onclick = async () => { if (L) L.cancel(); typed = true; drawType(); };
     };
     const drawType = msg => {
@@ -1175,16 +1202,18 @@ function getAnswer(item, recordIt) {
 }
 async function runLesson(id) {
   const l = LESSON[id], p = prog(id), attempt = p.attempts;
-  const queue = buildQueue(l, attempt);
+  await bankReady;
+  const selection = questionSelection(l), queue = selection.questions;
+  if (!queue.length) return openPrep(id, pendingReview);
   stopSession();
-  const run = RUN = { id, start: Date.now(), items: [], quit: false };
+  const run = RUN = { id, bankTierChanges: selection.tierChanges || [], challengeContext: challengeContext(), start: Date.now(), items: [], quit: false };
   const lead = l.single ? queue[0].by : l.cast[0];
   liveShell(l, lead);
   setSpeaker(lead);
-  queue.forEach(i => audioBuffer(i.by, i.q.replace("{name}", first())));
+  queue.forEach(i => audioBuffer(i.by, i.q.replace("{name}", first()), i.id));
   status("Getting the interviewers ready…");
   const avatarsReady = await initHeads([...new Set(queue.map(i => i.by))], status);
-  if (!avatarsReady && !run.quit && RUN === run) $("#fallback-note").textContent = "3D faces are unavailable. Simple faces and text questions remain available; audio plays when supported. You can type answers.";
+  if (!run.quit && RUN === run && queue.some(item => !HEADS[item.by])) $("#fallback-note").textContent = "Some 3D faces are unavailable. Their simple faces remain visible; recorded audio and typed answers are available.";
   if (run.quit || RUN !== run) { disposeHeads(); return; }
   // camera + calibration
   let eyes = false;
@@ -1212,9 +1241,10 @@ async function runLesson(id) {
     const target = posOf(l, item.by);
     if (eyes) V.acc = { target, listen: { n: 0, face: 0, hit: 0 }, answer: { n: 0, face: 0, hit: 0 } };
     V.phase = eyes ? "listen" : null;
+    if (!S.questionHistory.includes(item.id)) { S.questionHistory.push(item.id); save(); }
     status(`${CH[item.by].short} is asking…`); caption(item.q);
     const ff = $("#f-" + item.by); ff && ff.firstElementChild.nextElementSibling.classList.remove("nod");
-    await speak(item.q, item.by);
+    await speak(item.q, item.by, item.id);
     if (run.quit || RUN !== run) return;
     V.phase = eyes ? "answer" : null;
     ff && ff.querySelector("#nb-" + item.by) && ff.querySelector("#nb-" + item.by).classList.add("nod");
@@ -1225,11 +1255,11 @@ async function runLesson(id) {
     const m = analyzeAnswer(item, ans.text, ans.timing, eyes ? V.acc.answer : null);
     if (eyes && V.acc.listen.n > 5) m.eyeListenPct = +(V.acc.listen.hit / V.acc.listen.n).toFixed(2);
     run.blobs = run.blobs || []; run.blobs[run.items.length] = ans.blob || null;
-    run.items.push({ by: item.by, t: item.t, q: item.q, isFU: !!item.isFU, text: S.settings.transcripts ? ans.text : null, typed: ans.typed, repeats: ans.repeats, m });
+    run.items.push({ id: item.id, by: item.by, t: item.t, q: item.q, isFU: !!item.isFU, challengeSignal: answerSignalFor(item, m, evaluateAnswer({question:item,text:ans.text,inputStatus:ans.text?.trim()?'complete':'missing',storyIntake:S.intake})), text: S.settings.transcripts ? ans.text : null, typed: ans.typed, repeats: ans.repeats, m });
     $("#ctl").innerHTML = "";
     const fu = followUp(item, m, fuUsed, l);
     if (fu) { fuUsed++; queue.splice(i + 1, 0, { ...fu, by: item.by, isFU: true }); }
-    else if (i < queue.length - 1 && queue[i + 1].by === item.by && Math.random() < 0.6) { caption(""); await speak(pick(CH[item.by].acks), item.by); }
+    else if (allowBetweenQuestionAcknowledgement(run.challengeContext.level) && i < queue.length - 1 && queue[i + 1].by === item.by && Math.random() < 0.6) { caption(""); await speak(pick(CH[item.by].acks), item.by); }
   }
   setDots(queue.length, queue.length);
   const closer = l.single ? queue[queue.length - 1].by : l.cast[0];
@@ -1264,7 +1294,7 @@ async function finishLesson(l, eyes) {
     wordsPerAnswer: avg("words") && Math.round(avg("words")), starAvg: avg("star"), skillAcc: avg("expectFrac"), repeats: items.reduce((s, i) => s + i.repeats, 0),
     typedShare: +(items.filter(i => i.typed).length / (items.length || 1)).toFixed(2), followUps: items.filter(i => i.isFU).length };
   const body = { app: VERSION, lessonId: l.id, kind: l.kind || "lesson", review: pendingReview, attempt: p.attempts, form: l.kind === "measure" ? l.form : (p.attempts - 1) % (l.sets ? l.sets.length : 1),
-    mode: S.settings.mode, passMark: mark, score, passed: false, completed, progression: "non-empty-practice-completion", comps, kpi, eyes, calib: eyes && V.calib ? V.calib.quality : null,
+    mode: S.settings.mode, bankTierChanges: RUN.bankTierChanges, challengeContext: RUN.challengeContext, passMark: mark, score, passed: false, completed, progression: "non-empty-practice-completion", comps, kpi, eyes, calib: eyes && V.calib ? V.calib.quality : null,
     durationSec: Math.round((Date.now() - RUN.start) / 1000), date: today(), at: new Date().toISOString(), items };
   await appendRecord("lesson", body);
   save(); LAST = { l, body, prevBest, blobs: RUN.blobs || [] };
@@ -1278,6 +1308,7 @@ function ringSVG(score, mark) {
   <text x="59" y="66" text-anchor="middle" font-family="Bricolage Grotesque, system-ui" font-weight="800" font-size="30" fill="var(--text)">${score}</text></svg>`;
 }
 function viewResults() {
+  SV = null; // A new result must not inherit the previous lesson’s optional feedback.
   const { l, body, prevBest } = LAST, items = body.items, c = body.comps;
   const ranked = Object.keys(WEIGHTS).filter(k => c[k] != null).sort((a, b) => c[b] - c[a]);
   const wins = ranked.filter(k => c[k] >= 0.7).slice(0, 2); if (!wins.length) wins.push(ranked[0]);
@@ -1303,52 +1334,57 @@ function viewResults() {
       ${body.kpi.eyeAnswer != null ? `<p class="small muted">Natural eye contact is about 50 to 85% of the time. 100% isn't the goal.</p>` : ""}
     </div>
     <details><summary>Answer by answer</summary><div class="stack" style="margin-top:10px">${items.map(i => `<div><p class="small muted">${esc(CH[i.by].short)}: “${esc(i.q)}”</p>${i.text != null ? `<p>${esc(i.text) || "<i class='muted'>(no answer heard)</i>"}</p>` : ""}<div>${i.m.tags.map(t => `<span class="tag2">${esc(t)}</span>`).join("")}</div>${LAST.blobs && LAST.blobs[items.indexOf(i)] ? `<audio controls preload="none" style="width:100%;margin-top:6px" src="${URL.createObjectURL(LAST.blobs[items.indexOf(i)])}"></audio>` : ""}</div>`).join("")}</div></details>
-    <button class="btn wide" data-a="survey">Next: 20-second check-in</button>
+    <button class="btn wide" data-a="survey">Optional: quick check-in</button><button class="btn ghost wide" data-a="skipFeedback">Continue without rating</button>
   </div>`);
 }
 
 /* --- Survey + feedback filter + adaptation --- */
 let SV = null;
 H.survey = () => {
-  SV = { t0: Date.now(), comfort: null, useful: null, diff: null, hard: [] };
-  const sc = (k, lo, hi) => `<div class="scale">${[1, 2, 3, 4, 5].map(n => `<button class="chip" data-a="sv" data-k="${k}" data-v="${n}">${n}</button>`).join("")}</div><div class="spread small muted"><span>${lo}</span><span>${hi}</span></div>`;
-  render(`
-  <div class="stack" style="padding-top:8px">
-    <span class="label">Quick check-in</span><h2>How did that feel?</h2>
-    <div class="card stack"><b>How comfortable were you?</b>${sc("comfort", "Tense", "Relaxed")}</div>
-    <div class="card stack"><b>How useful was this round?</b>${sc("useful", "Not much", "Very")}</div>
-    <div class="card stack"><b>Difficulty</b><div class="row">${["Too easy", "Just right", "Too hard"].map(v => `<button class="chip" data-a="sv" data-k="diff" data-v="${v}">${v}</button>`).join("")}</div></div>
-    <div class="card stack"><b>What felt hardest? (pick any)</b><div class="row">${["Eye contact", "Thinking of answers", "Nerves", "Talking speed", "Panel questions", "Nothing really"].map(v => `<button class="chip" data-a="svm" data-v="${v}">${v}</button>`).join("")}</div></div>
-    <div class="card stack"><span class="label">Right now</span>${slider("sv-conf", "How confident do you feel about interviews?", "Not at all", "Very", (S.intake && S.intake.confidence) || 5)}${slider("sv-nerves", "How nervous do interviews make you?", "Calm", "Very nervous", (S.intake && S.intake.nerves) || 5)}</div>
-    <div class="card stack"><label for="cm"><b>Anything else? (optional)</b></label><textarea id="cm" placeholder="What would make this better for you?"></textarea></div>
-    <button class="btn wide" data-a="svdone">Save and continue</button>
-  </div>`);
-  bindSliders();
+  SV = { t0: Date.now(), comfort: null, useful: null, diff: null, hard: [], feel: null, saving: false };
+  render(`<div class="stack" style="padding-top:8px"><span class="label">Quick check-in · 1 of 2</span><h2>How did that feel?</h2><div class="row"><button class="btn" data-a="feel" data-v="negative">😟 Difficult feeling</button><button class="btn" data-a="feel" data-v="neutral">🙂 Okay</button><button class="btn" data-a="feel" data-v="positive">😀 Good</button></div><label for="cm">Anything else? (optional)</label><textarea id="cm"></textarea><p class="small muted">Choose a feeling, then difficulty. Your second tap saves this check-in.</p><button class="btn ghost wide" data-a="skipFeedback">Continue without rating</button></div>`);
 };
-H.sv = (d, el) => { SV[d.k] = isNaN(+d.v) ? d.v : +d.v; el.parentElement.querySelectorAll(".chip").forEach(c => c.classList.toggle("on", c === el)); };
-H.svm = (d, el) => { const i = SV.hard.indexOf(d.v); i < 0 ? SV.hard.push(d.v) : SV.hard.splice(i, 1); el.classList.toggle("on"); };
+H.feel = d => {
+  SV.feel = d.v; SV.comment = $("#cm").value; SV.comfort = d.v === "negative" ? 2 : d.v === "positive" ? 5 : 3;
+  render(`<div class="stack" style="padding-top:8px"><span class="label">Quick check-in · 2 of 2</span><h2>How was the difficulty?</h2><div class="row">${["Too easy","Just right","Too hard"].map(v=>`<button class="btn" data-a="difficulty" data-v="${v}">${v}</button>`).join("")}</div><p class="small muted">Tap once to save. This changes challenge, never whether you completed practice.</p><button class="btn ghost wide" data-a="skipFeedback">Continue without rating</button></div>`);
+};
+H.skipFeedback = async () => {
+  if (SV?.saving) return;
+  const comment = SV?.comment ?? $("#cm")?.value ?? "";
+  SV = {t0:Date.now(),comfort:null,useful:null,diff:null,hard:[],feel:null,comment,feedbackSkipped:true,saving:true};
+  try { await H.svdone(); } finally { SV.saving=false; }
+};
+H.difficulty = async d => { if (SV.saving) return; SV.diff=d.v; SV.saving=true; try { await H.svdone(); } finally { SV.saving=false; } };
 H.svdone = async () => {
-  const secs = (Date.now() - SV.t0) / 1000, comment = $("#cm").value || "";
+  const secs = (Date.now() - SV.t0) / 1000, comment = SV.comment ?? $("#cm")?.value ?? "";
+  const lessonRecord = S.records.filter(r=>r.kind === "lesson").slice(-1)[0];
+  if (S.records.some(r=>r.kind === "survey" && r.body.lessonHash === lessonRecord.hash)) { viewHome(); return; }
   const score = LAST.body.score;
   const flags = [];
-  if (secs < 5) flags.push("rushed");
+  if (!SV.feedbackSkipped && secs < 5) flags.push("rushed");
   if (SV.comfort && SV.comfort === SV.useful && (SV.comfort === 1 || SV.comfort === 5) && secs < 9) flags.push("straight-lined");
   const valid = !flags.includes("rushed") && !flags.includes("straight-lined");
   // Only valid answers change training. Perception gaps are recorded (useful KPI) but never raise difficulty.
   const notes = [];
+  // Challenge feedback is explicit intent even when survey-speed flags are present.
+  // Phase A owns feedback/breathing UI; this hook owns only next-lesson challenge state.
+  const challengeDecision = decideAdaptation({ previousState: S.adapt.phaseB, currentLevel: S.settings.mode,
+    lessonId: LAST.body.lessonId, attemptId: LAST.body.attempt, lessonKind: LAST.body.kind,
+    completed: LAST.body.completed, explicitDifficulty: SV.diff,
+    manualRevision: LAST.body.challengeContext?.manualRevision,
+    eventSequence: S.records.findIndex(r => r.kind === "lesson" && r.body.lessonId === LAST.body.lessonId && r.body.attempt === LAST.body.attempt),
+    answerSignals: LAST.body.items.map(item => item.challengeSignal || { eligible: false }) }, {manualLevel:S.settings.mode});
+  S.adapt.phaseB = challengeDecision.nextState;
+  if (challengeDecision.reason === "steady-floor") notes.push("Steady is the automatic minimum. You can choose Easy in Settings.");
+  S.adapt.calm = shouldOfferBreathing({feel:SV.feel,nerves:S.intake?.nerves,difficulty:SV.diff});
+  if (S.adapt.calm) notes.push("An optional breathing reset is available before the next lesson.");
   if (valid) {
-    if (SV.hard.includes("Nerves") || (SV.comfort && SV.comfort <= 2)) { S.adapt.calm = true; notes.push("Added a 30-second breathing reset before lessons."); }
-    else if (SV.comfort >= 4) S.adapt.calm = false;
-    const recentHard = S.records.filter(r => r.kind === "survey" && r.body.valid).slice(-2).filter(r => r.body.diff === "Too hard").length + (SV.diff === "Too hard" ? 1 : 0);
-    const order = Object.keys(MODES), mi = order.indexOf(S.settings.mode);
-    if (SV.diff === "Too hard" && !flags.some(f => f.startsWith("perception")) && recentHard >= 2 && mi > 0) notes.push(`Tip: switching to ${MODES[order[mi - 1]].label} mode for a few rounds can help. You can change it in Settings.`);
-    if (SV.diff === "Too easy" && mi < order.length - 1) notes.push(`If you want a different practice pace, try ${MODES[order[mi + 1]].label} mode in Settings when you're ready.`);
     if (SV.hard.includes("Eye contact") && !S.settings.eyeLight) { S.settings.eyeLight = true; notes.push("Turned on the eye-contact light to help you practice."); }
   }
-  if (notes.length) S.adapt.notes = notes.slice(-1);
+  if (notes.length) S.adapt.notes = notes;
   await appendRecord("survey", { app: VERSION, lessonId: LAST.l.id, attempt: LAST.body.attempt, lessonHash: S.records.filter(r => r.kind === "lesson").slice(-1)[0].hash,
-    confidence: +$("#sv-conf").value, nerves: +$("#sv-nerves").value,
-    comfort: SV.comfort, useful: SV.useful, diff: SV.diff, hard: SV.hard, comment, secs: Math.round(secs), flags, valid, adaptations: notes, score, at: new Date().toISOString() });
+    feedbackSkipped:!!SV.feedbackSkipped, feel: SV.feel, confidence: S.intake?.confidence ?? null, nerves: S.intake?.nerves ?? null,
+    challengeDecision: { from: challengeDecision.from, nextLevel: challengeDecision.nextLevel, reason: challengeDecision.reason, policyVersion: challengeDecision.policyVersion }, comfort: SV.comfort, useful: SV.useful, diff: SV.diff, hard: SV.hard, comment, secs: Math.round(secs), flags, valid, adaptations: notes, score, at: new Date().toISOString() });
   if (save()) toast("Saved");
   else toast("Not saved. Keep this page open; retry saving or copy your feedback.");
   deliver("survey", `Check-in after ${LAST.l.title}: confidence ${$("#sv-conf") ? $("#sv-conf").value : "?"}/10`, { survey: S.records[S.records.length - 1].body });
@@ -1392,12 +1428,13 @@ H.progress = async () => {
     ${S.jobs.length ? `<div class="card stack"><span class="label">Job hunt</span><div class="kv">${STAGES.filter(st => S.jobs.some(j => j.stage === st)).map(st => `<span>${st}</span><span>${S.jobs.filter(j => j.stage === st).length}</span>`).join("")}</div></div>` : ""}
     <div class="card stack"><span class="label">Data integrity</span><p class="small">${ok ? "&#10003; All " + S.records.length + " records passed the local hash-chain consistency check. This is not proof of authenticity or protection against rewriting the local data and hashes." : "Local record consistency could not be confirmed."}</p></div>
     <button class="btn ghost wide" data-a="feedback">Copy my feedback for the team</button>
+    <a class="btn ghost wide" href="./review/">Review the 21 voice clips</a>
     <button class="btn wide" data-a="export">Share my results</button>
   </div>`);
 };
 // Feedback-only export excludes profile fields, lesson transcripts and recordings.
 function feedbackPayload(state = S, pending = saveFailed) {
-  const fields = ["attempt", "confidence", "nerves", "comfort", "useful", "diff", "hard", "comment", "secs", "flags", "valid", "adaptations", "score"];
+  const fields = ["feedbackSkipped", "feel", "challengeDecision", "attempt", "confidence", "nerves", "comfort", "useful", "diff", "hard", "comment", "secs", "flags", "valid", "adaptations", "score"];
   const entries = state.records.filter(r => r.kind === "survey" || r.kind === "intake").map(r => {
     const b = r.body || {}, item = { kind: r.kind === "intake" ? "check-in" : "survey", lesson: b.lessonId ?? "unknown", timestamp: b.at ?? "unknown", appVersion: b.app ?? "unknown" };
     for (const k of (r.kind === "intake" ? ["confidence", "nerves"] : fields)) if (Object.prototype.hasOwnProperty.call(b, k)) item[k] = b[k];
@@ -1417,9 +1454,11 @@ H.feedback = () => {
   area.value = text; // Assign as text, never interpolate user comments into HTML.
   d.querySelector("#feedback-copy").onclick = async () => {
     try { await navigator.clipboard.writeText(text); status.textContent = "Copied: paste it into your Claude chat."; }
-    catch (e) { status.textContent = "Copy did not complete. Select and copy the preview manually. Nothing has been sent."; area.focus(); area.select(); }
+    catch (e) { status.textContent = "Copy did not complete. Select and copy the preview manually. On your phone, press and hold the text and choose Copy if available. Nothing has been sent."; area.focus(); area.select(); }
   };
   d.querySelector("#feedback-close").onclick = () => d.remove();
+  // This handler is entered by the explicit Copy action; preserve its user activation.
+  d.querySelector("#feedback-copy").onclick();
 };
 H.export = async () => {
   const data = { app: "Paydirt", version: VERSION, exportedAt: new Date().toISOString(), profile: { name: S.profile.name, job: S.profile.job, created: S.profile.created },
