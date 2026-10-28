@@ -125,7 +125,7 @@ summary{cursor:pointer;font-weight:700}
 </style>
 </head>
 <body>
-<div role="note" style="padding:10px 16px;background:#fff3cd;color:#332701;text-align:center">TEST VERSION: Keisha’s and Ellen’s 3D avatars are unavailable; their simple faces are shown. Practice, text questions and audio remain available.</div>
+<div role="note" style="padding:10px 16px;background:#fff3cd;color:#332701;text-align:center">TEST VERSION: If a 3D face cannot load, a simple face is shown. Practice, text questions and recorded audio remain available.</div>
 <!-- V4: automatic result/audio submission forms removed. -->
 
 
@@ -143,10 +143,10 @@ summary{cursor:pointer;font-weight:700}
 import { decideAdaptation, normalizeChallengeState, resetForManualMode, effectiveChallengeMode, allowBetweenQuestionAcknowledgement, answerSignalFor } from './modules/adaptation.mjs';
 import { questionId, chooseUnseen, historicalQuestionIds, shouldOfferBreathing } from './modules/questions.mjs';
 import { evaluateAnswer } from './modules/answer-evidence.mjs';
-import { readyBankItem, selectBankRound } from './modules/bank-readiness.mjs';
+import { readyBankItem, selectBankRound, resolveBankRecording } from './modules/bank-readiness.mjs';
 import { BANK } from './modules/reviewed-bank.mjs';
 /* ============ CORE ============ */
-const VERSION = "0.9.1-beta.1-integration";
+const VERSION = "0.9.1-beta.2-content-avatar";
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const pick = a => a[Math.floor(Math.random() * a.length)];
@@ -422,7 +422,7 @@ function normalizedAudioText(text) {
   return text.normalize("NFC").replace(/[‘’]/g, "'").replace(/[“”]/g, '"').replace(/\s+/g, " ").trim();
 }
 function audioMatch(id, text, stableId) {
-  const bank = stableId && BANK_RECORDINGS[stableId];
+  const bank = stableId && resolveBankRecording(BANK_RECORDINGS,stableId,bankContext());
   if (bank?.verifiedBytes && bank.decoded && bank.releaseApproved && bank.character === id && bank.text === text) return {key:stableId, file:bank.file, meta:bank, outcome:"stable-bank-id"};
   if (!AUDIO) return { key: null, outcome: "manifest-unavailable" };
   const key = lineId(id, text);
@@ -434,15 +434,16 @@ function audioMatch(id, text, stableId) {
 function audioBuffer(id, text, stableId) {
   const match = audioMatch(id, text, stableId), { key } = match;
   if (!AC || !key) return null;
-  if (!bufCache.has(key)) bufCache.set(key, fetch(match.file || "audio/" + key + ".mp3").then(r => { if (!r.ok) throw Error("Audio HTTP " + r.status); return r.arrayBuffer(); }).then(b => AC.decodeAudioData(b)).catch(() => { bufCache.delete(key); return null; }));
-  return bufCache.get(key);
+  const cacheKey = match.file || key;
+  if (!bufCache.has(cacheKey)) bufCache.set(cacheKey, fetch(match.file || "audio/" + key + ".mp3").then(r => { if (!r.ok) throw Error("Audio HTTP " + r.status); return r.arrayBuffer(); }).then(b => AC.decodeAudioData(b)).catch(() => { bufCache.delete(cacheKey); return null; }));
+  return bufCache.get(cacheKey);
 }
 async function initHeads(ids, onStatus) {
   const generation = mediaGeneration;
   try { if (!TH) TH = (await import("./modules/talkinghead.mjs")).TalkingHead; } catch (e) { return false; }
   for (const id of ids) {
     if (generation !== mediaGeneration) return false;
-    if (HEADS[id] || id === "ellen" || id === "keisha") continue;
+    if (HEADS[id]) continue;
     const el = document.getElementById("th-" + id); if (!el || !AV[id]) continue;
     try {
       const h = new TH(el, { lipsyncModules: ["en"], lipsyncLang: "en", cameraView: "head", modelFPS: 30,
@@ -850,6 +851,7 @@ function viewIntake(fromWelcome) {
       ${f("in-targets", "Places or jobs you want", "e.g. prep cook at a local bistro, line cook at a hotel", i.targets)}
       ${f("in-avail", "Your availability", "e.g. any day, mornings preferred", i.avail)}
       ${f("in-goal", "What would landing a job mean to you?", "In your own words", i.goal)}
+      <label class="row"><input type="checkbox" id="in-externship" ${i.recentExternshipConfirmed === true ? "checked" : ""}> I recently completed an externship. Use questions about that experience.</label>
     </div>
     <div class="card stack">
       <span class="label">Quick check-in</span>
@@ -868,7 +870,7 @@ H.intake = () => viewIntake(false);
 H.intakeSave = async d => {
   const v = id => ($("#" + id).value || "").trim().slice(0, 400);
   S.intake = { dishes: v("in-dishes"), projects: v("in-projects"), certs: v("in-certs"), targets: v("in-targets"), avail: v("in-avail"), goal: v("in-goal"),
-    confidence: +$("#in-conf").value, nerves: +$("#in-nerves").value, at: new Date().toISOString() };
+    recentExternshipConfirmed: $("#in-externship").checked, confidence: +$("#in-conf").value, nerves: +$("#in-nerves").value, at: new Date().toISOString() };
   S.consent = { share: false, record: $("#in-rec").checked };
   await appendRecord("intake", { app: VERSION, ...S.intake, consent: S.consent });
   save(); deliver("intake", `Intake: confidence ${S.intake.confidence}/10, nerves ${S.intake.nerves}/10`, { intake: S.intake, consent: S.consent });
@@ -1076,6 +1078,7 @@ function liveShell(l, who) {
   render(`${stageHTML(l, who)}
   <div class="stack" style="margin-top:14px">
     <div class="spread"><div class="dots" id="dots"></div><div class="row"><span class="eyedot" id="eyedot"><i></i>${S.settings.camera ? "eyes" : "camera off"}</span><button class="chip" data-a="quit">End</button></div></div>
+    <p class="muted small" id="question-context" hidden></p>
     <p class="caption" id="cap">${S.settings.captions ? "" : ""}</p>
     <p class="muted small" id="fallback-note" role="status"></p>
     <p class="muted small" id="status">Getting ready&hellip;</p>
@@ -1094,11 +1097,12 @@ function caption(t) { const c = $("#cap"); if (c) c.textContent = S.settings.cap
 let allowQuestionReview = false;
 let BANK_RECORDINGS = {};
 const bankReady = fetch('bank/recordings.json').then(r=>r.ok?r.json():{}).then(m=>{BANK_RECORDINGS=m;}).catch(()=>{});
-function recordedBankReady() { return BANK.length===90 && BANK.every(item=>readyBankItem(item,BANK_RECORDINGS)); }
+function bankContext() { return {recentExternshipConfirmed:S.intake?.recentExternshipConfirmed === true}; }
+function recordedBankReady() { return BANK.length===90 && BANK.every(item=>readyBankItem(item,BANK_RECORDINGS,bankContext())); }
 function questionSelection(l) {
   const m = challengeMode();
   if (recordedBankReady()) {
-    const round=selectBankRound(BANK,BANK_RECORDINGS,{lessonId:l.id,tier:m.level==='easy'?'steady':m.level,seen:S.questionHistory});
+    const round=selectBankRound(BANK,BANK_RECORDINGS,{lessonId:l.id,tier:m.level==='easy'?'steady':m.level,seen:S.questionHistory,context:bankContext()});
     return {...round,review:false,total:9,unseen:round.pairs.length};
   }
   const pool = l.kind === "measure" ? FORMS[l.form] : l.sets.flat();
@@ -1242,6 +1246,7 @@ async function runLesson(id) {
     if (eyes) V.acc = { target, listen: { n: 0, face: 0, hit: 0 }, answer: { n: 0, face: 0, hit: 0 } };
     V.phase = eyes ? "listen" : null;
     if (!S.questionHistory.includes(item.id)) { S.questionHistory.push(item.id); save(); }
+    const contextNode=$("#question-context"); contextNode.textContent=item.contextText||""; contextNode.hidden=!item.contextText;
     status(`${CH[item.by].short} is asking…`); caption(item.q);
     const ff = $("#f-" + item.by); ff && ff.firstElementChild.nextElementSibling.classList.remove("nod");
     await speak(item.q, item.by, item.id);
