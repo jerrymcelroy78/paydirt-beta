@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#0f1720">
-<title>Paydirt — Test version</title>
+<title>Paydirt</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
 <style>
@@ -125,7 +125,7 @@ summary{cursor:pointer;font-weight:700}
 </style>
 </head>
 <body>
-<div role="note" style="padding:10px 16px;background:#fff3cd;color:#332701;text-align:center">TEST VERSION: If a 3D face cannot load, a simple face is shown. Practice, text questions and recorded audio remain available.</div>
+
 <!-- V4: automatic result/audio submission forms removed. -->
 
 
@@ -668,6 +668,17 @@ const sd = a => { const m = mean(a); return Math.sqrt(mean(a.map(x => (x - m) **
 /* ============ SCORING ============ */
 const FILLER_RE = /\b(um+|uh+|erm|uhm|you know|kinda|kind of|sort of|i mean|basically|literally|i guess)\b/g;
 const QWORDS = /\b(what|how|when|who|where|is there|are there|do you|does|can i|could you|would|will)\b/;
+// Automatic difficulty evidence (Claude fix, Oct 31 2026). The reviewed clause grammar only recognizes a few
+// scripted sentences, so real answers were always "unknown" and difficulty never adjusted on its own.
+// Use the reviewed result when it is conclusive; otherwise fall back to observable answer metrics.
+function practiceEvidence(item, ans, m) {
+  let reviewed = null;
+  try { reviewed = evaluateAnswer({question:item,text:ans.text,inputStatus:ans.text?.trim()?'complete':'missing',storyIntake:S.intake}); } catch (e) {}
+  if (reviewed?.reviewed === true && reviewed.contentAvailable === true && ['present','absent'].includes(reviewed.concreteDetail)) return reviewed;
+  const words = m?.words || 0;
+  return { reviewed: true, version: 'metrics-fallback-1', contentAvailable: words > 0,
+    concreteDetail: (m.star >= 2 || m.spec >= 0.5) ? 'present' : 'absent' };
+}
 function analyzeAnswer(item, text, timing, eye) {
   const clean = (text || "").trim();
   const words = clean ? clean.split(/\s+/).length : 0;
@@ -1003,18 +1014,17 @@ function viewHome() {
   const base = recs.find(r => r.lessonId === "baseline");
   const lastMeasure = [...recs].reverse().find(r => LESSON[r.lessonId].kind === "measure");
   const due = reviewsDue(), dt = doneToday();
-  const planLine = dt >= m.perDay ? `Today's plan is done (${dt}/${m.perDay}). Rest helps it stick. Extra reps are a bonus.` :
+  const planLine = dt >= m.perDay ? `Today's plan is done. Rest helps it stick. Extra reps are a bonus.` :
     `Session ${dt + 1} of ${m.perDay} today${m.perDay > 1 ? ". Spacing sessions a few hours apart makes skills stick faster." : "."}`;
   const grad = isDone(LESSON.final);
   render(`
   <div class="stack" style="padding-top:8px">
     <div class="spread"><span class="brand">PAYDIRT</span><div class="row">${base ? `<button class="chip" data-a="plan">My plan</button>` : ""}<button class="chip" data-a="jobs">Job hunt</button><button class="chip" data-a="progress">Progress</button><button class="chip" data-a="settings">Settings</button></div></div>
     <h1>Hey ${esc(first())}.</h1>
-    <button class="btn ghost wide" data-a="feedback">Copy my feedback for the team</button>
-    <a class="btn ghost wide" href="./review/">Review the 21 voice clips</a>
+    <button class="btn ghost wide" data-a="sendFeedback">Send my feedback to Dad</button>
     ${S.intake ? "" : `<div class="card stack"><b>3 minutes to make this about you</b><p class="small muted">Tell the app about your dishes, training and goals, and it will help you turn them into interview stories.</p><button class="btn wide" data-a="intake">Tell us about you</button></div>`}
     <div class="ticket stack">
-      <div class="spread"><span class="label">${esc(m.label)} mode</span><span class="pill warm">${dt}/${m.perDay} today</span></div>
+      <div class="spread"><span class="label">${esc(m.label)} mode</span><span class="pill warm">${Math.min(dt, m.perDay)}/${m.perDay} today</span></div>
       <p>${planLine}</p>
       ${ni != null ? `<button class="btn wide" data-a="prep" data-id="${LESSONS[ni].id}">${prog(LESSONS[ni].id).attempts ? "Continue" : "Start"}: ${esc(LESSONS[ni].title)}</button>` : `<p><b>You've finished the full program.</b> Keep sharp with refresh reps below.</p>`}
       ${S.adapt.notes.length ? `<p class="small muted">${esc(S.adapt.notes.join(" "))}</p>` : ""}
@@ -1260,7 +1270,7 @@ async function runLesson(id) {
     const m = analyzeAnswer(item, ans.text, ans.timing, eyes ? V.acc.answer : null);
     if (eyes && V.acc.listen.n > 5) m.eyeListenPct = +(V.acc.listen.hit / V.acc.listen.n).toFixed(2);
     run.blobs = run.blobs || []; run.blobs[run.items.length] = ans.blob || null;
-    run.items.push({ id: item.id, by: item.by, t: item.t, q: item.q, isFU: !!item.isFU, challengeSignal: answerSignalFor(item, m, evaluateAnswer({question:item,text:ans.text,inputStatus:ans.text?.trim()?'complete':'missing',storyIntake:S.intake})), text: S.settings.transcripts ? ans.text : null, typed: ans.typed, repeats: ans.repeats, m });
+    run.items.push({ id: item.id, by: item.by, t: item.t, q: item.q, isFU: !!item.isFU, challengeSignal: answerSignalFor(item, m, practiceEvidence(item, ans, m)), text: S.settings.transcripts ? ans.text : null, typed: ans.typed, repeats: ans.repeats, m });
     $("#ctl").innerHTML = "";
     const fu = followUp(item, m, fuUsed, l);
     if (fu) { fuUsed++; queue.splice(i + 1, 0, { ...fu, by: item.by, isFU: true }); }
@@ -1323,7 +1333,7 @@ function viewResults() {
   render(`
   <div class="stack" style="padding-top:8px">
     <span class="label">${esc(l.title)} &middot; attempt ${body.attempt}</span>
-    <p class="small muted"><b>Practice estimate</b> based on simple text and timing rules, not a validated assessment or judgment of ability. Progression depends only on completing the round with a non-empty response to each prompt, not on this estimate. Gaze, pace, latency, keywords and STAR structure never decide completion. Optional gaze coaching is not scored.</p>
+    <p class="small muted">Practice estimate only. Answering every question completes the round.</p>
     <div class="score">${ringSVG(body.score, body.passMark)}<div class="stack" style="gap:6px"><h2>${esc(headline)}</h2>${delta}</div></div>
     <div class="card stack"><span class="label">What you did well</span>${wins.map(k => `<p>${esc(COACH[k].win)}</p>`).join("")}</div>
     <div class="card stack"><span class="label">Your next level-up</span><p><b>${esc(COACH[focus].name)}.</b> ${esc(COACH[focus].next)}</p></div>
@@ -1432,8 +1442,7 @@ H.progress = async () => {
       return c0 ? `<div class="card stack"><span class="label">How you feel</span><div class="kv"><span>Confidence (of 10)</span><span>${c0}${c1 != null ? " &rarr; " + c1 : ""}</span><span>Nerves (of 10)</span><span>${n0}${n1 != null ? " &rarr; " + n1 : ""}</span></div></div>` : ""; })()}
     ${S.jobs.length ? `<div class="card stack"><span class="label">Job hunt</span><div class="kv">${STAGES.filter(st => S.jobs.some(j => j.stage === st)).map(st => `<span>${st}</span><span>${S.jobs.filter(j => j.stage === st).length}</span>`).join("")}</div></div>` : ""}
     <div class="card stack"><span class="label">Data integrity</span><p class="small">${ok ? "&#10003; All " + S.records.length + " records passed the local hash-chain consistency check. This is not proof of authenticity or protection against rewriting the local data and hashes." : "Local record consistency could not be confirmed."}</p></div>
-    <button class="btn ghost wide" data-a="feedback">Copy my feedback for the team</button>
-    <a class="btn ghost wide" href="./review/">Review the 21 voice clips</a>
+    <button class="btn ghost wide" data-a="sendFeedback">Send my feedback to Dad</button>
     <button class="btn wide" data-a="export">Share my results</button>
   </div>`);
 };
@@ -1452,6 +1461,19 @@ function feedbackPayload(state = S, pending = saveFailed) {
   }
   return { app: "Paydirt", exportVersion: VERSION, persistence: pending ? "Includes in-memory changes that have not been saved. Keep this page open." : "From current browser state", limitations: "Historical filtered comments and failed writes from closed sessions cannot be recovered. Unknown metadata is marked unknown.", entries };
 }
+// Two-tap feedback (Claude fix, Oct 31 2026): plain-English summary into the phone's share sheet (Messages, Mail).
+function feedbackSummary() {
+  const lessons = S.records.filter(r => r.kind === "lesson").map(r => r.body), surveys = S.records.filter(r => r.kind === "survey").map(r => r.body);
+  const lines = [`PAYDIRT feedback from ${first()} (${new Date().toLocaleDateString()})`, `Mode: ${challengeMode().label}. Rounds done: ${lessons.length}.`];
+  lessons.slice(-3).forEach(b => { const sv = surveys.find(x => x.lessonId === b.lessonId && x.attempt === b.attempt) || {};
+    lines.push(`- ${LESSON[b.lessonId]?.title || b.lessonId}: ${b.completed ? "complete" : "not complete"}, estimate ${b.score}` + (sv.feel ? `, felt ${sv.feel}` : "") + (sv.diff ? `, difficulty ${sv.diff}` : "") + (sv.comment ? `. Note: ${sv.comment}` : "")); });
+  return lines.join("\n");
+}
+H.sendFeedback = async () => {
+  const text = feedbackSummary();
+  if (navigator.share) { try { await navigator.share({ title: "PAYDIRT feedback", text }); return; } catch (e) { if (e && e.name === "AbortError") return; } }
+  location.href = "sms:&body=" + encodeURIComponent(text);
+};
 H.feedback = () => {
   const text = JSON.stringify(feedbackPayload(), null, 2);
   const d = modal(`<h3>Copy my feedback for the team</h3><p>Review your saved feedback and any pending changes below. Nothing is sent automatically.</p><label for="feedback-preview">Feedback preview</label><textarea id="feedback-preview" readonly style="min-height:240px"></textarea><p id="feedback-status" role="status"></p><button class="btn" id="feedback-copy">Copy feedback</button><button class="btn ghost" id="feedback-close">Close</button>`);
@@ -1509,7 +1531,7 @@ H.reset = () => {
 
 /* ============ BOOT ============ */
 if (!window.isSecureContext) document.body.insertAdjacentHTML("afterbegin", `<p style="background:#f4b740;color:#2a1d00;padding:10px;margin:0;text-align:center">Open this page from an https:// link for camera and voice to work.</p>`);
-S.profile.setupDone ? viewHome() : viewWelcome(0);
+S.profile.setupDone ? bankReady.then(() => viewHome(), () => viewHome()) : viewWelcome(0);
 flushOutbox();
 </script>
 </body>
